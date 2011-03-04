@@ -1,0 +1,91 @@
+body {font-family: Arial, Helvetica, Tahoma, sans-serif; font-size:14px}
+li {margin-bottom:14px}
+code {font-size:14px}
+input {font-size:12px; margin-top:10px; font-weight:bold}
+
+p {
+	margin:2px 6px;
+	padding:0px;
+}
+
+body {
+	background-color:#aaaabb;
+}
+
+html, body {
+	height:100%;
+	width:100%;
+	overflow:hidden;
+}
+
+body h3 {
+	font-weight:bold;
+}
+
+body h4 {
+	font-weight:bold;
+	color:#444;
+}
+
+
+#titleBar {
+	background-color:#fff;
+	border:1px solid #bbf;
+}
+
+#headerTitle {
+	padding:3px 15px 0px 6px;
+	color:#444;
+	font-size:18px;
+	text-shadow: 1px 1px 2px #aaaacc;
+	float:left;
+}
+
+#headerCaption {
+	padding:9px 6px 0px;
+	color:#888;
+	font-size:12px;
+	float:left;
+}
+
+#headerSettings {
+	float:right;
+	width:160px;
+	text-align:right;
+}
+
+#headerUser {
+	float:right;
+	padding-top:7px;
+	font-size:15px;
+	font-style: italic;
+	color:#555;
+}
+
+.floatedLabel {
+	float:left;
+	width:100px;
+}
+
+.revisionInfoTable {
+	border-collapse: collapse; 
+}
+
+.revisionInfoTable td {
+	padding:3px 16px 2px 16px;
+	font-size:11px;
+	border:1px solid #eee;
+}
+
+
+.revisionInfoTable th {
+	padding:3px 16px 2px 16px;
+	font-size:11px;
+	border:1px solid #eee;
+	font-weight:bold;
+}
+
+.revisionInfoTable td.options {
+	font-size:normal;	
+} 
+

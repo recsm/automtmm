@@ -1,0 +1,585 @@
+<html>
+	<head>
+        <title>MAC</title>
+        
+        <link href="css/mac.css" rel="stylesheet" type="text/css"/>
+       
+        <style type="text/css">
+            @import "lib/dojo/dojo/resources/dojo.css";
+            @import "lib/dojo/dijit/themes/claro/claro.css";
+            @import "lib/dojo/dojox/grid/resources/Grid.css";
+            @import "lib/dojo/dojox/grid/resources/claroGrid.css";
+            .dojoxGrid table {
+			    margin: 0;
+			  }
+        </style>
+       
+        <script type="text/javascript" src="lib/air/AIRAliases.js"></script>
+        <script type="text/javascript" src="lib/air/AIRIntrospector.js"></script>
+        <script type="text/javascript">
+	        var djConfig = {
+	            parseOnLoad: false,
+	            isDebug: false,
+	            locale: 'en-us'
+	        };
+	        //Let dojo know where the console is at
+        	console = air.Introspector.Console
+   	 	</script>
+   	 	
+   	 	<script type="text/javascript" src="lib/mustache/mustache.js"></script>
+   	 	
+        <script type="text/javascript" src="lib/dojo/dojo/dojo.js"></script>
+        <!-- mac.dojo.js is a dojo layer built with all the dijit and dojox elements -->
+        <script type="text/javascript" src="lib/dojo/mac.dojo.js"></script>
+       
+        <script type="text/javascript">
+        	//global mac object
+			var mac = {
+				settings : {
+					lisrelCommand : 'c:\\lisrel87\\lisrel87.exe'
+				},
+				utilities : {
+					//Helper function to get a dom node from a certain tab using a css query
+					getTabNode : function(query, tab) {
+						return dojo.query(query, tab.containerNode)[0]
+					},
+					//Helper function to get a dojo dijit from a certain tab
+					getTabDijit : function(query, tab) {
+						return dijit.byNode(mac.utilities.getTabNode(query, tab))
+					},
+					//Shortcut to hide a node
+					nodeHide : function(node) {
+						dojo.style(node, {"visibility" : "hidden", "position" : "absolute"})
+					},
+					//Shortcut to show a node
+					nodeShow : function(node) {
+						dojo.style(node, {"visibility" : "visible", "position" : "static"})
+					}
+				},
+				//Parse a template node using mustache and return the parsed contents
+				template : function(templateId, params) {
+					return Mustache.to_html(dojo.byId(templateId).innerHTML, params)
+				},
+				views : {},
+				controllers : {}
+			}
+        </script>
+        <script type="text/javascript">
+        	dojo.require("dojo.data.ItemFileWriteStore");
+            dojo.require("dijit.layout.LayoutContainer");
+        	dojo.require("dijit.layout.TabContainer");
+            dojo.require("dijit.layout.ContentPane");
+            dojo.require("dijit.form.Select");
+            dojo.require("dijit.form.FilteringSelect");
+            dojo.require("dijit.form.Button");
+            dojo.require("dijit.form.NumberTextBox");
+            dojo.require("dijit.form.NumberSpinner");
+            dojo.require("dijit.form.ValidationTextBox");
+            dojo.require("dijit.form.SimpleTextarea");
+            dojo.require("dijit.Dialog");
+            dojo.require("dojox.grid.DataGrid");
+            
+            //////////////////////////////////////////////////////
+			////   LISREL       							  ////
+			//////////////////////////////////////////////////////
+            mac.lisrel = {
+            	runModel: function (sourceFileNativePath) {
+					var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
+					var lisrelExecutable = new air.File();
+					lisrelExecutable.nativePath = mac.settings.lisrelCommand;
+					nativeProcessStartupInfo.executable = lisrelExecutable; 
+					var processArgs = new air.Vector["<String>"](); 
+					processArgs.push(sourceFileNativePath); 
+					processArgs.push("OUT");
+					onOutputData = function(event) 
+					{ 
+					    var stdOut = process.standardOutput; 
+					    var data = stdOut.readUTFBytes(process.standardOutput.bytesAvailable); 
+					    console.log("Got: ", data);
+					    nodeProcessLog.innerHTML += "Got some output " + data
+					}
+					nativeProcessStartupInfo.arguments = processArgs; 
+					process = new air.NativeProcess(); 
+					process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, onOutputData); 
+					process.start(nativeProcessStartupInfo); 
+            	}
+            }
+            
+            //////////////////////////////////////////////////////
+            //// GIT VERSIONING 							  ////
+            //////////////////////////////////////////////////////
+            mac.versions = {
+            	saveModelToFile : function (round, experiment, modelContent) {
+					//Write the model to disk
+					var cr       = air.File.lineEnding;
+					modelContent = modelContent.replace('\n', cr)
+					sourceFile   = 'MacMTMM/repository/round_' + round + '/' + experiment + '/'+ experiment + '.LS8'
+					var ls8AirFile = air.File.documentsDirectory.resolvePath(sourceFile);
+	                var fs = new air.FileStream();
+	                fs.open(ls8AirFile, air.FileMode.WRITE);
+	                fs.writeUTFBytes(modelContent);
+	                fs.close(); 
+				}
+            }
+             
+            //////////////////////////////////////////////////////
+			////   MODELS         							  ////
+			//////////////////////////////////////////////////////
+            var RevisionStore = new dojo.data.ItemFileWriteStore({ 
+             data : { items : [
+			    { label: 'Study 1 - Experiment 1', round:'1', experiment:'experiment_a',  revision: "2", author:"Willem Saris", date:"January 17th, 2010 at 3:17pm", notes:"Working on the yada yada part" },
+		    	{ label: 'Study 1 - Experiment 2', round:'3', experiment:'another_experiment',  revision: "1", author:"Willem Saris", date:"January 15th, 2010, at 2:25pm", notes:"More yada yada"}
+			]}
+			});
+			
+			//////////////////////////////////////////////////////
+			////   VIEWS         							  ////
+			//////////////////////////////////////////////////////
+			//New Revision View
+			mac.views.newRevision = function(params) {
+				//console.log('double clicked ' + event)
+				tabTitle 	=  experiment + ' (new)' 
+				tab   = mac.controllers.main.openTab(tabTitle)
+				tab.set('content', mac.template('templateNewRevision', params))
+				buttonNewRevisionRun 	= mac.utilities.getTabDijit(".buttonNewRevisionRun", tab)
+				inputNewRevisionModel 	= mac.utilities.getTabDijit(".inputNewRevisionModel", tab)
+				nodeNewRevisionCompose 	= mac.utilities.getTabNode(".newRevisionCompose", tab)
+				nodeNewRevisionReview 	= mac.utilities.getTabNode(".newRevisionReview", tab)
+				nodeProcessLog 			= mac.utilities.getTabNode(".processLog", tab)
+				
+				processModel = function() {
+					mac.utilities.nodeHide(nodeNewRevisionCompose)
+				    mac.utilities.nodeShow(nodeNewRevisionReview)
+				    modelContent = inputNewRevisionModel.get('value')
+					mac.versions.saveModelToFile(experiment, round, modelContent)
+					nodeProcessLog.innerHTML += "Model saved as " + ls8AirFile.nativePath + '<br>'
+	                mac.lisrel.runModel(ls8AirFile.nativePath)
+	                nodeProcessLog.innerHTML += "Tried to run model in lisrel <br>"
+				}
+				
+				mac.utilities.nodeHide(nodeNewRevisionReview)
+				dojo.connect(buttonNewRevisionRun, 'onClick', processModel)
+			}
+			
+			mac.views.singleRevision = function(params) {		
+				//console.log('double clicked ' + event)
+				tabTitle = params.experiment + ' (' + params.revision + ')'
+				tab = mac.controllers.main.openTab(tabTitle)
+				tab.set('content', 'loading round ' + params.round + ' experiment ' + params.experiment + ' revsion ' + params.revision + '...')
+			}	
+			
+			//Revision List View (Home)
+			mac.views.revisionList = function () {
+			    gridRevisions			 	= false
+			    inputNewRevisionRound 	    = false
+			    inputNewRevisionExperiment   = false
+			    selectedRow                 = false
+			    buttonNewRevisionSubmit		= false
+			    buttonViewRevisionSubmit		= false
+			    panelCurrentRevisionInfo     = false
+			    
+			    updateRowBasedInfo =  function() {
+			    	inputNewRevisionRound.set('value', selectedRow.round)
+			    	inputNewRevisionExperiment.set('value', selectedRow.experiment)
+			    	panelCurrentRevisionInfo.innerHTML = mac.template('templateRevisionListTopInfo', selectedRow)
+			    }
+			    
+			    onGridRowSelected = function() {
+			    	selectedRow = gridRevisions.selection.getFirstSelected()
+					updateRowBasedInfo()
+				}
+				
+				openViewRevision = function() {
+					selectedRow = gridRevisions.selection.getFirstSelected()
+					mac.controllers.main.openSingleRevision(selectedRow)
+				}
+				
+				openNewRevision = function() {
+					experiment 	= inputNewRevisionExperiment.get('value')
+					round 		= inputNewRevisionRound.get('value')
+					mac.controllers.main.openNewRevision({round: round, experiment: experiment})
+				}
+				
+				init = function () {	 
+					gridRevisions 		 		= dijit.byId('gridRevisions')
+					inputNewRevisionRound 		= dijit.byId('inputNewRevisionRound')
+					inputNewRevisionExperiment 	= dijit.byId('inputNewRevisionExperiment')
+					buttonNewRevisionSubmit      = dijit.byId('buttonNewRevisionSubmit')
+					panelCurrentRevisionInfo     = dojo.query('#viewRevisionList .panelCurrentRevisionInfo')[0]
+					buttonViewRevisionSubmit     = dijit.byId('buttonViewRevisionSubmit')
+					
+					gridRevisions.setStore(RevisionStore)  //Set the data store for the grid
+					gridRevisions.selection.addToSelection(0) //Select our 
+					dojo.connect(gridRevisions, 'onSelected',    onGridRowSelected)
+					dojo.connect(gridRevisions, 'onRowDblClick', openViewRevision)
+					dojo.connect(buttonViewRevisionSubmit , 'onClick', openViewRevision)
+					dojo.connect(buttonNewRevisionSubmit , 'onClick', openNewRevision)
+					selectedRow = gridRevisions.selection.getFirstSelected()
+					updateRowBasedInfo()
+				}
+				init()
+			}
+			
+			//Compare View to compare two revisions
+			mac.views.compareBase = function() {
+			   //This is a helper function to create unique lists with individual stores
+				setFromUniqueStore = function(fromStore, uniqueProperty, toFilteredSelect) {
+		           //Fetch the data from the orig store.
+		            fromStore.fetch({
+		                onComplete: function (items, request) {
+			            	var uniqueItems  = []
+			            	//Add an empty value as the first item
+			            	var allItem = {}
+			            	allItem[uniqueProperty] = ''
+			            	uniqueItems.push(allItem)
+			            	var values = []
+			            	var items  = items
+		            	    for (var i = 0; i < items.length; i++) {
+		                        var item = items[i];
+		                        var value = fromStore.getValue(item, uniqueProperty)
+		                        if (values.indexOf(value) == -1) {
+		                        	values.push(value)
+		                        	var newItem = {}
+		                        	newItem[uniqueProperty] = value
+		                        	uniqueItems.push(newItem)
+		                        } 
+		                     }
+		                     var uniqueStore = new dojo.data.ItemFileWriteStore({data:{items:uniqueItems}});
+			                 toFilteredSelect.set('store', uniqueStore)
+			            }  ,
+			            //Callback for if the lookup fails.
+		                onError:  function fetchFailed(error, request) {
+				                console.log("getUniqueList lookup failed");
+				            }
+		            });
+				}
+				
+				init = function() {
+					buttonCompareSubmit         = dijit.byId('buttonCompareSubmit')
+					dojo.connect(buttonCompareSubmit , 'onClick', mac.controllers.main.openCompareRevisions(
+							{fromRevision : 61,
+						  	 toRevision   : 62}
+						))
+				}
+				init()
+			}
+			
+			mac.views.compareRevisions = function (params) {
+				
+				tabTitle = 'experiment_2 (' + params.fromRevision + ' vs ' + params.toRevision + ')'
+				tab = mac.controllers.main.openTab(tabTitle)
+				tab.set('content', mac.template('templateCompareRevisions', params))
+				
+				gridDiff 			  = mac.utilities.getTabDijit(".gridDiff", tab)
+				selectFilterCountry   = mac.utilities.getTabDijit(".selectFilterCountry", tab)
+				selectFilterGroup     = mac.utilities.getTabDijit(".selectFilterGroup", tab)
+				selectFilterParamater = mac.utilities.getTabDijit(".selectFilterParamater", tab)
+				spinnerMinDifference  = mac.utilities.getTabDijit(".spinnerMinDifference", tab)
+				
+				allItems =  [
+				    { country: 'Ireland', group:'group_1', paramater: 'sd1', RevisionFrom : 0.20, RevisionTo: 0.98},
+					{ country: 'France',  group:'group_1', paramater: 'sd2', RevisionFrom : 0.10, RevisionTo: 0.76},
+					{ country: 'France',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.30, RevisionTo: 0.34},
+					{ country: 'England',  group:'group_12', paramater: 'sd3', RevisionFrom : 0.10, RevisionTo: 0.45},
+					{ country: 'England',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.87},
+					{ country: 'England',  group:'group_2', paramater: 'sd2', RevisionFrom : 0.10, RevisionTo: 0.28},
+					{ country: 'England',  group:'group_2', paramater: 'sd3', RevisionFrom : 0.60, RevisionTo: 0.56},
+					{ country: 'England',  group:'group_1', paramater: 'sd4', RevisionFrom : 0.18, RevisionTo: 0.29},
+					{ country: 'France',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.14, RevisionTo: 0.28},
+					{ country: 'France',  group:'group_1', paramater: 'sd2', RevisionFrom : 0.12, RevisionTo: 0.42},
+					{ country: 'Never Never Land',  group:'group_1', paramater: 'sd3', RevisionFrom : 0.90, RevisionTo: 0.13},
+					{ country: 'Never Never Land',  group:'group_2', paramater: 'sd4', RevisionFrom : 0.80, RevisionTo: 0.33},
+					{ country: 'Never Never Land',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.70, RevisionTo: 0.23},
+					{ country: 'Never Never Land',  group:'group_2', paramater: 'sd5', RevisionFrom : 0.10, RevisionTo: 0.43},
+					{ country: 'Never Never Land',  group:'group_1', paramater: 'sd3', RevisionFrom : 0.50, RevisionTo: 0.23},
+					{ country: 'Never Never Land',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.40, RevisionTo: 0.63},
+					{ country: 'France',  group:'group_3', paramater: 'sd2', RevisionFrom : 0.20, RevisionTo: 0.43},
+					{ country: 'France',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.23},
+					{ country: 'Somalia',  group:'group_2', paramater: 'sd3', RevisionFrom : 0.30, RevisionTo: 0.63},
+					{ country: 'Somalia',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.23},
+					{ country: 'Somalia',  group:'group_3', paramater: 'sd2', RevisionFrom : 0.40, RevisionTo: 0.53},
+					{ country: 'Germany', group:'group_2', paramater: 'sd4', RevisionFrom : 0.13, RevisionTo: 0.15}
+				]
+				
+				//Calculate the difference between each item
+				for (i in allItems) {
+				    difference = Math.abs(allItems[i]['RevisionFrom'] - allItems[i]['RevisionTo'])
+				    difference = Math.ceil(difference * 100) / 100
+					allItems[i]['difference'] = difference
+				}
+				
+				var storeAll = new dojo.data.ItemFileWriteStore({ 
+	             data : { items: allItems}
+				});
+				
+				//Assign the datastores to the different widgets
+				setFromUniqueStore(storeAll, 'country',   		selectFilterCountry)
+				setFromUniqueStore(storeAll, 'group',     		selectFilterGroup)
+				setFromUniqueStore(storeAll, 'paramater', 		selectFilterParamater)
+				
+				updateFilter = function () {
+					filterParams = {}
+					country    = selectFilterCountry.get('displayedValue')
+					group      = selectFilterGroup.get('displayedValue')
+					paramater  = selectFilterParamater.get('displayedValue')	
+					if (country != '')   filterParams['country'] 	 = country
+					if (group != '') 	 filterParams['group'] 		 = group
+					if (paramater != '') filterParams['paramater']   = paramater
+					gridDiff.filter(filterParams)
+				}
+				
+				//It would be nice to avoid this function, but I don't know how to filter a grid by greater than
+				//Must be possible but hard to find an example so here we always create a new item store
+				updateGridStoreLastValue = null
+				updateGridStore = function() {
+					//Make a sub selection of items to add to the grid, having a difference greater than a certain value 
+					inRangeItems = []
+					minValue  = spinnerMinDifference.get('value')
+					if (minValue == updateGridStoreLastValue) return true; //pass if no change
+					for (i in allItems) {
+						item = allItems[i]
+						if (item.difference > minValue){
+							inRangeItems.push(item)
+						}
+					}
+					var storeInRange = new dojo.data.ItemFileWriteStore({ 
+		             	data : { items: inRangeItems}
+					});
+					gridDiff.setStore(storeInRange)
+					updateFilter()
+					udpateGridStoreLastValue = minValue
+				}
+				
+				updateGridStore()
+				dojo.connect(spinnerMinDifference,  'onClick',   updateGridStore)
+				dojo.connect(spinnerMinDifference,  'onChange',  updateGridStore)
+				dojo.connect(spinnerMinDifference,  'onKeyDown', updateGridStore)
+				dojo.connect(selectFilterCountry,   'onChange',  updateFilter)
+				dojo.connect(selectFilterGroup, 	'onChange',  updateFilter)
+				dojo.connect(selectFilterParamater, 'onChange',  updateFilter)
+			}
+			
+			
+			//////////////////////////////////////////////////////
+			////   CONTROLLERS   							  ////
+			//////////////////////////////////////////////////////
+			mac.controllers.main =  {
+				
+				//A js reference to the main tab container dijit
+				tabContainerMain : false,
+				//Open and view a single revision
+				openSingleRevision : function(params) {
+					mac.views.singleRevision(params)
+				},
+				//Create a new revision
+				openNewRevision : function(params) {
+					mac.views.newRevision(params)
+				},
+				openCompareRevisions : function(params) {
+					mac.views.compareRevisions(params)
+				},
+				//Show the settings
+				openSettings : function ()
+				{
+				    dialog = dijit.byId('dialogSettings')
+					dialog.show()
+				},
+				//Helper function to open a tab
+				openTab : function (tabTitle) {
+					var tab = new dijit.layout.ContentPane({ title:tabTitle, closable: "true"});
+					tabContainerMain.addChild(tab);
+					tabContainerMain.selectChild(tab);
+					return tab
+				},
+				init : function(parentObject) {
+					//Initialize global items
+					self.tabContainerMain = dijit.byId('tabContainerMain')
+					
+					//Connect global items
+					dojo.connect(dijit.byId('buttonSettingsSubmit'), 'onClick', mac.controllers.main.openSettings)
+					
+					//Initialize our standard base views
+					mac.views.revisionList()
+					mac.views.compareBase()
+				}
+			}
+			
+			
+			//////////////////////////////////////////////////////
+			////   ONLOAD       							  ////
+			//////////////////////////////////////////////////////
+			dojo.addOnLoad( function() {
+				//Parse dojo widgets out of the applicationBase div
+				dojo.parser.parse(dojo.byId('application'));
+				//Call our main controller to init the application
+				mac.controllers.main.init()
+			});
+	      
+        </script>
+	</head>
+    <body class="claro">
+    	<div id="applicationBase">
+	    	<div dojoType="dijit.layout.LayoutContainer" style="width: 100%; height: 100%;">
+	    		<div dojoType="dijit.layout.ContentPane" layoutAlign="top" id="titleBar" style="height:28px;padding:2px;">
+	    			<div id="headerSettings">			           			
+	    				<button id="buttonSettingsSubmit" dojoType="dijit.form.Button" iconClass="dijitIconConfigure">Settings</button>
+					</div>
+	    			<div id="headerUser">Willem Saris</div>
+	    			<div id="headerTitle">MAC</div>
+	    			<div id="headerCaption">MTMM Archiving and Comparison program</div>
+	    		</div>
+	    		<div dojoType="dijit.layout.ContentPane" layoutAlign="client" style="padding:0px 2px;">
+				    <div id="tabContainerMain" dojoType="dijit.layout.TabContainer" style="width: 100%; height: 100%;">
+				        <div id="viewRevisionList" dojoType="dijit.layout.ContentPane" title="Model Revisions" selected="true">
+				           <div style="height:30%">
+				           		<div  style="float:left;width:68%"> 
+				           		 	<h3>Model Revisions</h3>
+				           			<div class="panelCurrentRevisionInfo">
+				           			</div>
+				           			<button id="buttonViewRevisionSubmit" dojoType="dijit.form.Button" >View Revision</button>
+				           		</div>
+				           		<div style="float:right;width:30%"> 
+				           			<h3>New Revision</h3>
+				           			<p>
+				           			<label class="floatedLabel">Round:</label>
+				           			   <input id="inputNewRevisionRound" dojoType="dijit.form.NumberTextBox" >
+				           			</p>
+				           			<p>
+				           				<label class="floatedLabel">Experiment:</label> 
+				           				<input id="inputNewRevisionExperiment" regExp="[A-Za-z0-9_]+" dojoType="dijit.form.ValidationTextBox" >
+				           			</p>
+				           			<button id="buttonNewRevisionSubmit" dojoType="dijit.form.Button" iconClass="dijitIconNewTask" style="margin-left:125px;">Begin New Revision</button>
+				           		</div>
+				           </div>
+				           <table id="gridRevisions" selectionMode="single" store="RevisionStore" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 70%;">
+				           		<thead>
+				           		<tr>
+				           			<th field="round" width="3%">Round</th>
+				           			<th field="experiment" width="10%">Experiment</th>
+				           			<th field="revision" width="5%">Revision</th>
+				           			<th field="author" width="10%">Author</th>
+				           			<th field="date" width="15%">Date</th>
+				           			<th field="notes" width="30%">Notes</th>
+				           		</tr>
+				           		</thead>
+				           </table>
+				        </div>
+				         <div dojoType="dijit.layout.ContentPane" title="Compare">
+				            <h3>Compare</h3>
+				            <p>Select the Round and Experiment first, then choose the revisions to compare.</p>
+		           			<p>
+		           				<label style="float:left;width:170px;">Round and Experiment:</label>
+		           			   <select id="inputCompareRoundAndExperiment" dojoType="dijit.form.Select">
+		           			   		<option value="beep"> Round 2 - this_experiment</option>
+		           			   		<option value="beep"> Round 1 - another_experiment</option>
+		           			   		<option value="beep"> Round 1 - one_more_experiment</option>
+		           			   </select>
+		           			</p>
+		           			<p>
+		           			   <label style="float:left;width:170px;">Compare Revision:</label>
+		           			   <select style="float:left;" id="inputCompareFromRevision" dojoType="dijit.form.Select">
+		           			   		<option value="beep"> Revision 1 - Willem </option>
+		           			   		<option value="beep"> Revision 1 - Melanie</option>
+		           			   		<option value="beep"> Revision 2 - Willem </option>
+		           			   </select>
+		           			   <label style="float:left;width:20px;padding-left:10px;" > to: </label>
+		           			   <select style="float:left;" id="inputCompareToRevision" dojoType="dijit.form.Select">
+		           			   		<option value="beep"> Revision 1 - Willem </option>
+		           			   		<option value="beep"> Revision 1 - Melanie</option>
+		           			   		<option value="beep"> Revision 2 - Willem </option>
+		           			   </select>
+		           			   	<button style="float:left;" id="buttonCompareSubmit" dojoType="dijit.form.Button" >Compare</button>
+		           			</p>
+				        </div>
+				        <div dojoType="dijit.layout.ContentPane" title="Synchronize">
+				            <h3>Synchronize</h3>
+				            <p>Synchronize with your team</p>
+				            <button id="buttonSyncSubmit" dojoType="dijit.form.Button" >Syncronize Now</button>
+				        </div>
+				    </div>
+				 </div>  
+			</div> 
+			<div id="dialogSettings" dojoType="dijit.Dialog" title="MAC Settings" >
+		        <label> Some Setting</label>
+   			   <select dojoType="dijit.form.Select">
+   			   		<option value="beep"> Option 1 </option>
+   			   		<option value="beep"> Option 2</option>
+   			   		<option value="beep"> Option 3 </option>
+   			   </select>
+   			   <button dojoType="dijit.form.Button" >Update</button>
+			</div>
+		</div>
+		<script id="templateRevisionListTopInfo" type="template/mustache">
+	    	<h4> Round {{round }} experiment {{experiment}}</h4>
+	    	<p>Revision {{revision}} created by {{author}} on {{date}}</p>
+		</script>
+		<script id="templateNewRevision" type="template/mustache">
+			<div class="newRevisionCompose">
+			   <div style="height:40px;padding:2px;">
+			     <button class="buttonNewRevisionRun" style="float:right;" dojoType="dijit.form.Button" iconClass="dijitIconSave">Run in Lisrel</button>
+			     <h3>New Revision for Round {{round}} experiment {{experiment}}</h3> 
+			   </div>
+			   <label style="padding:2px 2px 4px ">Enter the new model below:</label>
+			   <div style="padding:2px;height:80%">
+			     <textarea class="inputNewRevisionModel" dojoType="dijit.form.SimpleTextarea" style="width:100%;height:100%"></textarea>
+			   </div>
+			</div>
+			<div class="newRevisionReview">
+			   <h3>New Revision for Round {{round}} experiment {{experiment}}</h3> 
+			   <h4>Process Log</h4>
+			   <div class="processLog"></div>
+			</div>
+		</script>
+		<script id="templateCompareRevisions" type="template/mustache">
+			<div style="height:97%">
+				<div style="height:22%">
+				  <h3>Comparison for Round 1 Experiment experiment_2</h3>
+				  <h4>Selected Revisions</h4>
+				  <table class="revisionInfoTable">
+				    <tr>
+				      <th>Revision {{fromRevision}}</th>
+				      <td>Willem Saris</td>
+				      <td>October 15th, 2010 at 3:15pm</td>
+				      <td class="options"><button dojoType="dijit.form.Button">View Revision</button></td>
+				    </tr>
+				    <tr>
+				      <th>Revision {{toRevision}}</th>
+				      <td>Willem Saris</td>
+				      <td>October 15th, 2010 at 3:19pm</td>
+				      <td class="options"><button dojoType="dijit.form.Button">View Revsion</button></td>
+				    </tr>
+				  </table>
+				</div>
+				<h4 style="margin:0px;padding:0px;">Filter By:</h4>
+				<table>
+				  <tr>
+				     <td>Country:</td>
+				     <td>Group:</td>
+				     <td>Paramater:</td>
+				     <td>Difference Greater Than:</td>
+				  </tr>
+				  <tr>
+				     <td><select required="false" class="selectFilterCountry" dojoType="dijit.form.FilteringSelect" searchAttr="country" labelAttr="country" ignoreCase="true"></select></td>
+				     <td><select required="false" class="selectFilterGroup" dojoType="dijit.form.FilteringSelect" searchAttr="group" labelAttr="group" ignoreCase="true"></select></td>
+				     <td><select required="false" class="selectFilterParamater" dojoType="dijit.form.FilteringSelect" searchAttr="paramater" labelAttr="paramater" ignoreCase="true"></select></td>
+				     <td><input required="true" class="spinnerMinDifference" dojoType="dijit.form.NumberSpinner" value=".10" smallDelta=".01" constraints="{min:0,max:1}"  /></td>
+				  </tr>
+				</table><br>
+				<div style="height:60%">
+				<table style="clear:left" class="gridDiff" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 100%;">
+		          <thead>
+		            <tr>
+		              <th field="country" width="10%">Country</th>
+		              <th field="group" width="10%">Group</th>
+		              <th field="paramater" width="10%">Paramater</th>
+		              <th field="RevisionFrom" width="10%">Revision 67</th>
+		              <th field="RevisionTo" width="10%">Revision 69</th>
+		              <th field="difference" width="10%">Difference</th>
+		          	 </tr>
+		          </thead>
+		        </table>
+		        </div>
+	        </div>
+		</script> 
+    </body>
+</html>

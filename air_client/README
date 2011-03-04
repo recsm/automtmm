@@ -1,0 +1,15 @@
+This is an Adobe AIR Application for diffing lisrel output
+
+It may be tested with a command like:
+adl application.xml
+
+
+You need adl.exe from http://www.adobe.com/products/air/sdk/
+Also to build the Air app you will need the adt.bat file contained in the air sdk
+
+Make a certificate
+adt -certificate -cn RECSM 1024-RSA certificate.pfx xm*******
+
+Then build_win.bat in this directory may be used to build the application
+
+This application must use target -native for air, to access the air native process.api
