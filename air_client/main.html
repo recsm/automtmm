@@ -83,7 +83,10 @@
 			////   LISREL       							  ////
 			//////////////////////////////////////////////////////
             mac.lisrel = {
+            	//Run a model in lisrel, the callee should implement setLisrelResult
             	runModel: function (sourceFileNativePath) {
+            		callee = arguments.callee
+            	
 					var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
 					var lisrelExecutable = new air.File();
 					lisrelExecutable.nativePath = mac.settings.lisrelCommand;
@@ -96,7 +99,7 @@
 					    var stdOut = process.standardOutput; 
 					    var data = stdOut.readUTFBytes(process.standardOutput.bytesAvailable); 
 					    console.log("Got: ", data);
-					    nodeProcessLog.innerHTML += "Got some output " + data
+					    callee.setLisrelResult(data)
 					}
 					nativeProcessStartupInfo.arguments = processArgs; 
 					process = new air.NativeProcess(); 
@@ -118,7 +121,8 @@
 	                var fs = new air.FileStream();
 	                fs.open(ls8AirFile, air.FileMode.WRITE);
 	                fs.writeUTFBytes(modelContent);
-	                fs.close(); 
+	                fs.close();
+	                return ls8AirFile 
 				}
             }
              
@@ -147,18 +151,25 @@
 				nodeNewRevisionReview 	= mac.utilities.getTabNode(".newRevisionReview", tab)
 				nodeProcessLog 			= mac.utilities.getTabNode(".processLog", tab)
 				
+				logProgress = function(progress) {
+					nodeProcessLog.innerHTML += progress
+				}
+				
 				processModel = function() {
 					mac.utilities.nodeHide(nodeNewRevisionCompose)
 				    mac.utilities.nodeShow(nodeNewRevisionReview)
 				    modelContent = inputNewRevisionModel.get('value')
-					mac.versions.saveModelToFile(experiment, round, modelContent)
-					nodeProcessLog.innerHTML += "Model saved as " + ls8AirFile.nativePath + '<br>'
-	                mac.lisrel.runModel(ls8AirFile.nativePath)
-	                nodeProcessLog.innerHTML += "Tried to run model in lisrel <br>"
+				    controller = new mac.controllers.RunNewLisrelModel({round :round,
+				    													experiment : experiment,
+				    													modelContent : modelContent,
+			    														onProgress: logProgress})
+				    controller.processModel()
 				}
 				
 				mac.utilities.nodeHide(nodeNewRevisionReview)
 				dojo.connect(buttonNewRevisionRun, 'onClick', processModel)
+				
+			
 			}
 			
 			mac.views.singleRevision = function(params) {		
@@ -254,12 +265,16 @@
 		            });
 				}
 				
+				onCompareSubmit = function() {
+					mac.controllers.main.openCompareRevisions(
+						{fromRevision : 61,
+					  	 toRevision   : 62}
+					)
+				}
+				
 				init = function() {
 					buttonCompareSubmit         = dijit.byId('buttonCompareSubmit')
-					dojo.connect(buttonCompareSubmit , 'onClick', mac.controllers.main.openCompareRevisions(
-							{fromRevision : 61,
-						  	 toRevision   : 62}
-						))
+					dojo.connect(buttonCompareSubmit , 'onClick', onCompareSubmit)
 				}
 				init()
 			}
@@ -404,6 +419,26 @@
 				}
 			}
 			
+			//Run a new lisrel model, the callee should have a method for logProgress
+			mac.controllers.RunNewLisrelModel = function(params) {
+				
+				//Called from the lisrel class
+				setLisrelResult = function(result) {
+					params.onProgress('Lisrel finished with result (' + result + ')')
+				}
+				
+				//Called from the view
+				processModel = function() {
+					ls8AirFile = mac.versions.saveModelToFile(params.experiment, 
+															  params.round, 
+															  params.modelContent)
+					console.log(caller)
+					params.onProgress("Model saved as " + ls8AirFile.nativePath + '<br>');
+	                mac.lisrel.runModel({sourceFile : ls8AirFile.nativePath,
+	                					 onResult   : setLisrelResult})
+	                params.onProgress("Tried to run model in lisrel <br>")
+	            }
+			} 
 			
 			//////////////////////////////////////////////////////
 			////   ONLOAD       							  ////
