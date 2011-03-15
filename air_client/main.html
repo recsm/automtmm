@@ -36,7 +36,10 @@
         	//global mac object
 			var mac = {
 				settings : {
-					lisrelCommand : 'c:\\lisrel87\\lisrel87.exe'
+					lisrelCommand 		 : 'C:\\lisrel87\\lisrel87.exe',
+					gitCommand    		 : 'C:\\msysgit\\msysgit\\bin\\git.exe',
+					masterRepository     : 'git@github.com:recsm/MTMMTest.git',
+					gitBranchName        : 'tom' 
 				},
 				utilities : {
 					//Helper function to get a dom node from a certain tab using a css query
@@ -79,6 +82,48 @@
             dojo.require("dijit.Dialog");
             dojo.require("dojox.grid.DataGrid");
             
+            ///Air Native Process Listener
+            
+            mac.BasicAirListener = function BasicAirListener(processName) {
+                
+                var _process = false;
+                var _log = function _log(message) {
+			        	console.log(processName + ' ' + message)
+			        }
+			    
+			    var _listeners = {
+			    	onOutputData : function onOutputData() {
+				            _log("DATA: " + _process.standardOutput.readUTFBytes(_process.standardOutput.bytesAvailable)); 
+				        },
+			  		onErrorData  : function onErrorData(event) {
+				            _log("ERROR: " + _process.standardError.readUTFBytes(_process.standardError.bytesAvailable)); 
+				        },
+			  		onExit 		 : function onExit(event) {
+			            	_log("EXIT: Process exited with code " + event.exitCode);
+			        	},
+			  		onIOError 	 :  function onIOError(event) {
+			            	_log('IOERROR: ' + event.toString());
+			        	}
+			    }
+			        
+      			return  {
+      			    log :     _log,
+      			    setListener  : function(listenerName, listenerFunction) {
+      			    	_listeners[listenerName] = listenerFunction
+      			    	
+      			    },
+			  		init 		 : function init(process) {
+			  		    _process = process
+			            _process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, _listeners['onOutputData']);
+			            _process.addEventListener(air.ProgressEvent.STANDARD_ERROR_DATA, _listeners['onErrorData']);
+			            _process.addEventListener(air.NativeProcessExitEvent.EXIT, _listeners['onExit']);
+			            _process.addEventListener(air.IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, _listeners['onIOError']);
+			            _process.addEventListener(air.IOErrorEvent.STANDARD_ERROR_IO_ERROR, _listeners['onIOError']);
+			        }
+			  	}
+            }
+
+            
             //////////////////////////////////////////////////////
 			////   LISREL       							  ////
 			//////////////////////////////////////////////////////
@@ -112,7 +157,44 @@
             //// GIT VERSIONING 							  ////
             //////////////////////////////////////////////////////
             mac.versions = {
-            	saveModelToFile : function (round, experiment, modelContent) {
+            	//Make a shell call to git, you should supply an onOutputData callback function
+                git : function git(args, processListener) {
+                	var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
+					var gitExecutable = new air.File();
+					gitExecutable.nativePath = mac.settings.gitCommand;
+					nativeProcessStartupInfo.executable = gitExecutable;
+					var processArgs = new air.Vector["<String>"](); 
+					for (var i in args) {
+						processArgs.push(args[i]);
+					}
+					nativeProcessStartupInfo.arguments = processArgs;
+					//Set our initial directory to our repository for the command
+					nativeProcessStartupInfo.workingDirectory = air.File.documentsDirectory.resolvePath('MacMTMM/repository')
+					//Call the init method of the listener that we were passed
+					var process = new air.NativeProcess();
+					processListener.init(process)
+					process.start(nativeProcessStartupInfo);   
+                },
+                //Do the initial checkout of the repository
+                cloneRepository : function cloneRepository() {
+                     var processListener = new mac.BasicAirListener('git clone')
+                     processListener.setListener('onExit',  function (event) {
+			            processListener.log("EXIT: exit code was " + event.exitCode);
+			            //Call the branch function
+			            mac.versions.branchRepository(mac.settings.gitBranchName)
+			         });
+                	 //Clone the initial repository
+                	 mac.versions.git(['clone', 
+                	     mac.settings.masterRepository,
+                	     mac.settings.localRepository],
+                	     processListener)
+                },
+                branchRepository : function branchRepository(branchName) {
+                	//Branch it to settings.branch name
+                	var processListener = new mac.BasicAirListener('git branch')
+                	mac.versions.git(['branch', branchName], processListener)
+                },
+            	saveModelToFile : function saveModelToFile(round, experiment, modelContent) {
 					//Write the model to disk
 					var cr       = air.File.lineEnding;
 					modelContent = modelContent.replace('\n', cr)
@@ -123,6 +205,26 @@
 	                fs.writeUTFBytes(modelContent);
 	                fs.close();
 	                return ls8AirFile 
+				},
+				startPageant : function startPageant() {
+					//On windows pageant keeps ppk keys in memory which are used by plink to ssh
+					//This calls pageant with the My Documents/MacMTMM/mac.ppk so that no 
+					//password or further interaction with git on windows is needed
+					var nativeProcessStartupInfo = new air.NativeProcessStartupInfo();
+		            var file = air.File.applicationDirectory.resolvePath("putty/pageant.exe");
+		            var ppkFile = air.File.documentsDirectory.resolvePath('MacMTMM/mac.ppk');
+		            var processArgs = new air.Vector["<String>"](); 
+					processArgs.push(ppkFile.nativePath);
+					nativeProcessStartupInfo.arguments = processArgs;
+		            nativeProcessStartupInfo.executable = file;
+		            var process = new air.NativeProcess();
+		            var processListener = new mac.BasicAirListener('pageant')
+		            processListener.init(process)
+		            process.start(nativeProcessStartupInfo);
+		  		},
+				init : function init() {
+					//Setup the environment
+					mac.versions.startPageant()
 				}
             }
              
@@ -159,16 +261,32 @@
 					mac.utilities.nodeHide(nodeNewRevisionCompose)
 				    mac.utilities.nodeShow(nodeNewRevisionReview)
 				    modelContent = inputNewRevisionModel.get('value')
-				    controller = new mac.controllers.RunNewLisrelModel({round :round,
-				    													experiment : experiment,
-				    													modelContent : modelContent,
-			    														onProgress: logProgress})
+				    controller = new mac.controllers.RunNewLisrelModel.create({round :round,
+					    													   experiment : experiment,
+					    													   modelContent : modelContent,
+				    														   onProgress: logProgress})
 				    controller.processModel()
 				}
 				
 				mac.utilities.nodeHide(nodeNewRevisionReview)
 				dojo.connect(buttonNewRevisionRun, 'onClick', processModel)
 				
+			
+			}
+			
+			mac.views.Synchronize = function() {
+			
+				cloneButton = false
+				
+				onCloneButtonClick = function() {
+					mac.versions.cloneRepository()
+				}
+				
+				init = function() {
+					cloneButton = dijit.byId('buttonCloneSubmit')
+					dojo.connect(cloneButton, 'onClick', onCloneButtonClick)
+				}
+				init()
 			
 			}
 			
@@ -183,11 +301,11 @@
 			mac.views.revisionList = function () {
 			    gridRevisions			 	= false
 			    inputNewRevisionRound 	    = false
-			    inputNewRevisionExperiment   = false
+			    inputNewRevisionExperiment  = false
 			    selectedRow                 = false
 			    buttonNewRevisionSubmit		= false
-			    buttonViewRevisionSubmit		= false
-			    panelCurrentRevisionInfo     = false
+			    buttonViewRevisionSubmit	= false
+			    panelCurrentRevisionInfo    = false
 			    
 			    updateRowBasedInfo =  function() {
 			    	inputNewRevisionRound.set('value', selectedRow.round)
@@ -212,13 +330,12 @@
 				}
 				
 				init = function () {	 
-					gridRevisions 		 		= dijit.byId('gridRevisions')
-					inputNewRevisionRound 		= dijit.byId('inputNewRevisionRound')
-					inputNewRevisionExperiment 	= dijit.byId('inputNewRevisionExperiment')
+					gridRevisions 		 		 = dijit.byId('gridRevisions')
+					inputNewRevisionRound 		 = dijit.byId('inputNewRevisionRound')
+					inputNewRevisionExperiment 	 = dijit.byId('inputNewRevisionExperiment')
 					buttonNewRevisionSubmit      = dijit.byId('buttonNewRevisionSubmit')
 					panelCurrentRevisionInfo     = dojo.query('#viewRevisionList .panelCurrentRevisionInfo')[0]
 					buttonViewRevisionSubmit     = dijit.byId('buttonViewRevisionSubmit')
-					
 					gridRevisions.setStore(RevisionStore)  //Set the data store for the grid
 					gridRevisions.selection.addToSelection(0) //Select our 
 					dojo.connect(gridRevisions, 'onSelected',    onGridRowSelected)
@@ -379,7 +496,6 @@
 			////   CONTROLLERS   							  ////
 			//////////////////////////////////////////////////////
 			mac.controllers.main =  {
-				
 				//A js reference to the main tab container dijit
 				tabContainerMain : false,
 				//Open and view a single revision
@@ -407,6 +523,12 @@
 					return tab
 				},
 				init : function(parentObject) {
+					//Adjust settings
+					mac.settings.localRepository = air.File.documentsDirectory.resolvePath('MacMTMM/repository').nativePath
+					
+					//Start up pageant to keep our ppk key in memory for putty
+					mac.versions.init()
+				
 					//Initialize global items
 					self.tabContainerMain = dijit.byId('tabContainerMain')
 					
@@ -416,28 +538,40 @@
 					//Initialize our standard base views
 					mac.views.revisionList()
 					mac.views.compareBase()
+					mac.views.Synchronize()
 				}
 			}
 			
 			//Run a new lisrel model, the callee should have a method for logProgress
-			mac.controllers.RunNewLisrelModel = function(params) {
+			mac.controllers.RunNewLisrelModel = {
 				
-				//Called from the lisrel class
-				setLisrelResult = function(result) {
-					params.onProgress('Lisrel finished with result (' + result + ')')
-				}
+				create : function create(params) {
 				
-				//Called from the view
-				processModel = function() {
-					ls8AirFile = mac.versions.saveModelToFile(params.experiment, 
-															  params.round, 
-															  params.modelContent)
-					console.log(caller)
-					params.onProgress("Model saved as " + ls8AirFile.nativePath + '<br>');
-	                mac.lisrel.runModel({sourceFile : ls8AirFile.nativePath,
-	                					 onResult   : setLisrelResult})
-	                params.onProgress("Tried to run model in lisrel <br>")
-	            }
+				    //Private variables
+					var _experiment 	 = params.experiment
+					var _round     	 = params.round
+					var _modelContent = params.modelContent
+					var _onProgress   = params.onProgress
+				
+					return {
+						//Public methods and variables
+						//Called from the lisrel class
+						setLisrelResult : function setLisrelResult (result) {
+							_onProgress('Lisrel finished with result (' + result + ')')
+						},
+						
+						//Called from the view
+						processModel : function processModel() {
+							ls8AirFile = mac.versions.saveModelToFile(_experiment, 
+																	  _round, 
+																	  _modelContent)
+							_onProgress("Model saved as " + ls8AirFile.nativePath + '<br>');
+			                mac.lisrel.runModel({sourceFile : ls8AirFile.nativePath,
+			                					 onResult   : this.setLisrelResult})
+			                _onProgress("Tried to run model in lisrel <br>")
+			            }
+			        }
+		        }
 			} 
 			
 			//////////////////////////////////////////////////////
@@ -447,7 +581,12 @@
 				//Parse dojo widgets out of the applicationBase div
 				dojo.parser.parse(dojo.byId('application'));
 				//Call our main controller to init the application
+				
 				mac.controllers.main.init()
+				
+				
+				console.log(mac.settings.localRepository)
+				
 			});
 	      
         </script>
@@ -527,6 +666,9 @@
 		           			</p>
 				        </div>
 				        <div dojoType="dijit.layout.ContentPane" title="Synchronize">
+				        	<h3>Setup Repository</h3>
+				        	<p>Clone an initial copy of the repository</p>
+				        	<button id="buttonCloneSubmit" dojoType="dijit.form.Button" >Setup Clone</button>
 				            <h3>Synchronize</h3>
 				            <p>Synchronize with your team</p>
 				            <button id="buttonSyncSubmit" dojoType="dijit.form.Button" >Syncronize Now</button>
