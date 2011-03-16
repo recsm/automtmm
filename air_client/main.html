@@ -57,6 +57,25 @@
 					//Shortcut to show a node
 					nodeShow : function(node) {
 						dojo.style(node, {"visibility" : "visible", "position" : "static"})
+					},
+					//get an experiment directory, returns a path string
+					getExperimentDirectory : function getExperimentDirectory (round, experiment) {
+						dirPath   = 'MacMTMM/repository/round_' + round + '/' + experiment
+						return air.File.documentsDirectory.resolvePath(dirPath).nativePath;
+					},
+					//get an experiment air file object
+					getExperimentFile : function getExperimentFile (round, experiment, fileName) {
+						filePath   = mac.utilities.getExperimentDirectory(round, experiment) + '/'+ fileName
+						return air.File.documentsDirectory.resolvePath(filePath)
+					},
+					//get the experiment file contents firectly
+					getExperimentFileContents : function getExperimentFileContents (round, experiment, fileName) {
+						 var stream = new air.FileStream();
+						 var file = mac.utilities.getExperimentFile(round, experiment, fileName)
+						 stream.open(file, air.FileMode.READ);
+						 var contents = stream.readUTFBytes(stream.bytesAvailable);
+						 stream.close();
+						 return contents
 					}
 				},
 				//Parse a template node using mustache and return the parsed contents
@@ -82,8 +101,7 @@
             dojo.require("dijit.Dialog");
             dojo.require("dojox.grid.DataGrid");
             
-            ///Air Native Process Listener
-            
+            ///Helper for Air Native Process Listener
             mac.BasicAirListener = function BasicAirListener(processName) {
                 
                 var _process = false;
@@ -91,7 +109,9 @@
 			        	console.log(processName + ' ' + message)
 			        }
 			    
-			    var _listeners = {
+			    
+			    //These listeners are internal and for logging
+			    var _loggers = {
 			    	onOutputData : function onOutputData() {
 				            _log("DATA: " + _process.standardOutput.readUTFBytes(_process.standardOutput.bytesAvailable)); 
 				        },
@@ -105,6 +125,22 @@
 			            	_log('IOERROR: ' + event.toString());
 			        	}
 			    }
+			    
+			    //These listeners are the ones set by you when you call setListener('onExit' , fucntion(event) {})
+			    var _listeners = {
+			    	onOutputData : function onOutputData(event) {
+				            //data =  _process.standardOutput.readUTFBytes(_process.standardOutput.bytesAvailable); 
+				        },
+			  		onErrorData  : function onErrorData(event) {
+				            //error = _process.standardError.readUTFBytes(_process.standardError.bytesAvailable); 
+				        },
+			  		onExit 		 : function onExit(event) {
+			            	//exitCode = event.exitCode;
+			        	},
+			  		onIOError 	 :  function onIOError(event) {
+			            	//error = event.toString();
+			        	}
+			    }
 			        
       			return  {
       			    log :     _log,
@@ -114,11 +150,19 @@
       			    },
 			  		init 		 : function init(process) {
 			  		    _process = process
+			  		    //Add in user listeners
 			            _process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, _listeners['onOutputData']);
 			            _process.addEventListener(air.ProgressEvent.STANDARD_ERROR_DATA, _listeners['onErrorData']);
 			            _process.addEventListener(air.NativeProcessExitEvent.EXIT, _listeners['onExit']);
 			            _process.addEventListener(air.IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, _listeners['onIOError']);
 			            _process.addEventListener(air.IOErrorEvent.STANDARD_ERROR_IO_ERROR, _listeners['onIOError']);
+			        
+			        	//Add in loggers
+			        	_process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, _loggers['onOutputData']);
+			            _process.addEventListener(air.ProgressEvent.STANDARD_ERROR_DATA, _loggers['onErrorData']);
+			            _process.addEventListener(air.NativeProcessExitEvent.EXIT, _loggers['onExit']);
+			            _process.addEventListener(air.IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, _loggers['onIOError']);
+			            _process.addEventListener(air.IOErrorEvent.STANDARD_ERROR_IO_ERROR, _loggers['onIOError']);
 			        }
 			  	}
             }
@@ -128,9 +172,8 @@
 			////   LISREL       							  ////
 			//////////////////////////////////////////////////////
             mac.lisrel = {
-            	//Run a model in lisrel, the callee should implement setLisrelResult
-            	runModel: function (sourceFileNativePath) {
-            		callee = arguments.callee
+            	//Run a model in lisrel, you should provide the path and a processListener
+            	runModel: function (sourceFileNativePath, processListener) {
             	
 					var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
 					var lisrelExecutable = new air.File();
@@ -139,25 +182,29 @@
 					var processArgs = new air.Vector["<String>"](); 
 					processArgs.push(sourceFileNativePath); 
 					processArgs.push("OUT");
-					onOutputData = function(event) 
-					{ 
-					    var stdOut = process.standardOutput; 
-					    var data = stdOut.readUTFBytes(process.standardOutput.bytesAvailable); 
-					    console.log("Got: ", data);
-					    callee.setLisrelResult(data)
-					}
 					nativeProcessStartupInfo.arguments = processArgs; 
 					process = new air.NativeProcess(); 
-					process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, onOutputData); 
+					processListener.init(process)
 					process.start(nativeProcessStartupInfo); 
-            	}
+            	},
+            	saveModelToFile : function saveModelToFile(round, experiment, modelContent) {
+					//Write the model to disk
+					var cr       = air.File.lineEnding;
+					modelContent = modelContent.replace('\n', cr)
+					ls8AirFile = mac.utilities.getExperimentFile(round, experiment, 'INPUT.LS8')
+	                var fs = new air.FileStream();
+	                fs.open(ls8AirFile, air.FileMode.WRITE);
+	                fs.writeUTFBytes(modelContent);
+	                fs.close();
+	                return ls8AirFile 
+				}
             }
             
             //////////////////////////////////////////////////////
             //// GIT VERSIONING 							  ////
             //////////////////////////////////////////////////////
             mac.versions = {
-            	//Make a shell call to git, you should supply an onOutputData callback function
+            	//Make a shell call to git, you should supply an processListener instance of new mac.BasicAirListener('my process name for logging purposes')
                 git : function git(args, processListener) {
                 	var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
 					var gitExecutable = new air.File();
@@ -172,39 +219,39 @@
 					nativeProcessStartupInfo.workingDirectory = air.File.documentsDirectory.resolvePath('MacMTMM/repository')
 					//Call the init method of the listener that we were passed
 					var process = new air.NativeProcess();
-					processListener.init(process)
+					processListener.init(process);
 					process.start(nativeProcessStartupInfo);   
                 },
                 //Do the initial checkout of the repository
                 cloneRepository : function cloneRepository() {
                      var processListener = new mac.BasicAirListener('git clone')
                      processListener.setListener('onExit',  function (event) {
-			            processListener.log("EXIT: exit code was " + event.exitCode);
 			            //Call the branch function
-			            mac.versions.branchRepository(mac.settings.gitBranchName)
+			            mac.versions.branchRepository(mac.settings.gitBranchName);
 			         });
                 	 //Clone the initial repository
                 	 mac.versions.git(['clone', 
                 	     mac.settings.masterRepository,
                 	     mac.settings.localRepository],
-                	     processListener)
+                	     processListener);
                 },
                 branchRepository : function branchRepository(branchName) {
                 	//Branch it to settings.branch name
-                	var processListener = new mac.BasicAirListener('git branch')
-                	mac.versions.git(['branch', branchName], processListener)
+                	var processListener = new mac.BasicAirListener('git branch');
+                	mac.versions.git(['branch', branchName], processListener);
                 },
-            	saveModelToFile : function saveModelToFile(round, experiment, modelContent) {
-					//Write the model to disk
-					var cr       = air.File.lineEnding;
-					modelContent = modelContent.replace('\n', cr)
-					sourceFile   = 'MacMTMM/repository/round_' + round + '/' + experiment + '/'+ experiment + '.LS8'
-					var ls8AirFile = air.File.documentsDirectory.resolvePath(sourceFile);
-	                var fs = new air.FileStream();
-	                fs.open(ls8AirFile, air.FileMode.WRITE);
-	                fs.writeUTFBytes(modelContent);
-	                fs.close();
-	                return ls8AirFile 
+                commit : function commit(processListener) {
+                	//Commit our changes to the local repository
+                	//Push from our origin repo to the master
+                	mac.versions.git(['commit', '-a'], processListener)
+                },
+                push : function push(processListener) {
+                	//Push from our origin repo to the master
+                	mac.versions.git(['push', 'origin', 'master'], processListener)
+                },
+				addDirectory : function addDirectory(directoryPath, processListener){
+					//Add a directory to version control
+					mac.versions.git(['add', directoryPath  + air.File.separator + '\*'], processListener)
 				},
 				startPageant : function startPageant() {
 					//On windows pageant keeps ppk keys in memory which are used by plink to ssh
@@ -243,46 +290,88 @@
 			//////////////////////////////////////////////////////
 			//New Revision View
 			mac.views.newRevision = function(params) {
+			
+				var ls8AirFile
+				
+				var experiment = params.experiment
+				var round      = params.round
+			
 				//console.log('double clicked ' + event)
-				tabTitle 	=  experiment + ' (new)' 
-				tab   = mac.controllers.main.openTab(tabTitle)
+				var tabTitle 	=  experiment + ' (new)' 
+				var tab   = mac.controllers.main.openTab(tabTitle)
 				tab.set('content', mac.template('templateNewRevision', params))
-				buttonNewRevisionRun 	= mac.utilities.getTabDijit(".buttonNewRevisionRun", tab)
-				inputNewRevisionModel 	= mac.utilities.getTabDijit(".inputNewRevisionModel", tab)
-				nodeNewRevisionCompose 	= mac.utilities.getTabNode(".newRevisionCompose", tab)
-				nodeNewRevisionReview 	= mac.utilities.getTabNode(".newRevisionReview", tab)
-				nodeProcessLog 			= mac.utilities.getTabNode(".processLog", tab)
+				
+				var buttonNewRevisionRun 	= mac.utilities.getTabDijit(".buttonNewRevisionRun", tab)
+				var inputNewRevisionModel 	= mac.utilities.getTabDijit(".inputNewRevisionModel", tab)
+				var nodeNewRevisionCompose 	= mac.utilities.getTabNode(".newRevisionCompose", tab)
+				var nodeNewRevisionReview 	= mac.utilities.getTabNode(".newRevisionReview", tab)
+				var nodeProcessLog 			= mac.utilities.getTabNode(".processLog", tab)
 				
 				logProgress = function(progress) {
 					nodeProcessLog.innerHTML += progress
 				}
 				
-				processModel = function() {
+				var setLisrelResult = function setLisrelResult(exitCode) {
+					//An output file has been created 
+					if (exitCode == 0) {
+						//Open up the output file, and check for errors
+						//If we find E_R_R_O_R then we alert the user and show the output
+						var OUT = mac.utilities.getExperimentFileContents(round, experiment, 'OUT')
+						if (OUT.indexOf('E_R_R_O_R') == -1) {
+							//Success
+							//If the output is ok, then we process it in python to extract the dataset we need						
+							logProgress('Input ran with success committing changes<br>');
+							var processListener = new mac.BasicAirListener('git add')
+							processListener.setListener('onExit', function (event) {
+								if(event.exitCode == 0) {
+								    var commitListener = new mac.BasicAirListener('git commit')
+									mac.versions.commit(commitListener)
+								}
+							});
+							var directory = mac.utilities.getExperimentDirectory(round, experiment)
+							mac.versions.addDirectory(directory, processListener)
+						}
+						else {
+							logProgress('Lisrel reported an error in the input.')
+						}
+					}
+					else {
+						logProgress('There was an error running lisrel exit code (' + exitCode +')<br>');
+					}
+				}
+				
+				var processModel = function processModel() {
 					mac.utilities.nodeHide(nodeNewRevisionCompose)
 				    mac.utilities.nodeShow(nodeNewRevisionReview)
-				    modelContent = inputNewRevisionModel.get('value')
-				    controller = new mac.controllers.RunNewLisrelModel.create({round :round,
-					    													   experiment : experiment,
-					    													   modelContent : modelContent,
-				    														   onProgress: logProgress})
-				    controller.processModel()
+				   
+				    var modelContent = inputNewRevisionModel.get('value')
+				    
+					ls8AirFile = mac.lisrel.saveModelToFile(round, experiment, modelContent)
+					logProgress("Input saved as " + ls8AirFile.nativePath + '<br>');
+					
+					var processListener = new mac.BasicAirListener('lisrel')
+					processListener.setListener('onExit', function(event) 
+					{ 
+					    setLisrelResult(event.exitCode)
+					});
+					
+	                mac.lisrel.runModel(ls8AirFile.nativePath, processListener)
+	                logProgress("Running input in lisrel <br>")
 				}
 				
 				mac.utilities.nodeHide(nodeNewRevisionReview)
 				dojo.connect(buttonNewRevisionRun, 'onClick', processModel)
-				
-			
 			}
 			
 			mac.views.Synchronize = function() {
 			
-				cloneButton = false
+				var cloneButton = false
 				
 				onCloneButtonClick = function() {
 					mac.versions.cloneRepository()
 				}
 				
-				init = function() {
+				var init = function() {
 					cloneButton = dijit.byId('buttonCloneSubmit')
 					dojo.connect(cloneButton, 'onClick', onCloneButtonClick)
 				}
@@ -292,20 +381,20 @@
 			
 			mac.views.singleRevision = function(params) {		
 				//console.log('double clicked ' + event)
-				tabTitle = params.experiment + ' (' + params.revision + ')'
+				var tabTitle = params.experiment + ' (' + params.revision + ')'
 				tab = mac.controllers.main.openTab(tabTitle)
 				tab.set('content', 'loading round ' + params.round + ' experiment ' + params.experiment + ' revsion ' + params.revision + '...')
 			}	
 			
 			//Revision List View (Home)
 			mac.views.revisionList = function () {
-			    gridRevisions			 	= false
-			    inputNewRevisionRound 	    = false
-			    inputNewRevisionExperiment  = false
-			    selectedRow                 = false
-			    buttonNewRevisionSubmit		= false
-			    buttonViewRevisionSubmit	= false
-			    panelCurrentRevisionInfo    = false
+			    var gridRevisions			 	= false
+			    var inputNewRevisionRound 	    = false
+			    var inputNewRevisionExperiment  = false
+			    var selectedRow                 = false
+			    var buttonNewRevisionSubmit		= false
+			    var buttonViewRevisionSubmit	= false
+			    var panelCurrentRevisionInfo    = false
 			    
 			    updateRowBasedInfo =  function() {
 			    	inputNewRevisionRound.set('value', selectedRow.round)
@@ -314,18 +403,18 @@
 			    }
 			    
 			    onGridRowSelected = function() {
-			    	selectedRow = gridRevisions.selection.getFirstSelected()
+			    	var selectedRow = gridRevisions.selection.getFirstSelected()
 					updateRowBasedInfo()
 				}
 				
 				openViewRevision = function() {
-					selectedRow = gridRevisions.selection.getFirstSelected()
+					var selectedRow = gridRevisions.selection.getFirstSelected()
 					mac.controllers.main.openSingleRevision(selectedRow)
 				}
 				
 				openNewRevision = function() {
-					experiment 	= inputNewRevisionExperiment.get('value')
-					round 		= inputNewRevisionRound.get('value')
+					var experiment 	= inputNewRevisionExperiment.get('value')
+					var round 		= inputNewRevisionRound.get('value')
 					mac.controllers.main.openNewRevision({round: round, experiment: experiment})
 				}
 				
@@ -500,14 +589,14 @@
 				tabContainerMain : false,
 				//Open and view a single revision
 				openSingleRevision : function(params) {
-					mac.views.singleRevision(params)
+					new mac.views.singleRevision(params)
 				},
 				//Create a new revision
 				openNewRevision : function(params) {
-					mac.views.newRevision(params)
+					new mac.views.newRevision(params)
 				},
 				openCompareRevisions : function(params) {
-					mac.views.compareRevisions(params)
+					new mac.views.compareRevisions(params)
 				},
 				//Show the settings
 				openSettings : function ()
@@ -541,38 +630,6 @@
 					mac.views.Synchronize()
 				}
 			}
-			
-			//Run a new lisrel model, the callee should have a method for logProgress
-			mac.controllers.RunNewLisrelModel = {
-				
-				create : function create(params) {
-				
-				    //Private variables
-					var _experiment 	 = params.experiment
-					var _round     	 = params.round
-					var _modelContent = params.modelContent
-					var _onProgress   = params.onProgress
-				
-					return {
-						//Public methods and variables
-						//Called from the lisrel class
-						setLisrelResult : function setLisrelResult (result) {
-							_onProgress('Lisrel finished with result (' + result + ')')
-						},
-						
-						//Called from the view
-						processModel : function processModel() {
-							ls8AirFile = mac.versions.saveModelToFile(_experiment, 
-																	  _round, 
-																	  _modelContent)
-							_onProgress("Model saved as " + ls8AirFile.nativePath + '<br>');
-			                mac.lisrel.runModel({sourceFile : ls8AirFile.nativePath,
-			                					 onResult   : this.setLisrelResult})
-			                _onProgress("Tried to run model in lisrel <br>")
-			            }
-			        }
-		        }
-			} 
 			
 			//////////////////////////////////////////////////////
 			////   ONLOAD       							  ////
