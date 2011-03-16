@@ -129,10 +129,12 @@
 			    //These listeners are the ones set by you when you call setListener('onExit' , fucntion(event) {})
 			    var _listeners = {
 			    	onOutputData : function onOutputData(event) {
-				            //data =  _process.standardOutput.readUTFBytes(_process.standardOutput.bytesAvailable); 
+			    	        //var process = processListener.getProcess()
+				            //data =  process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable); 
 				        },
 			  		onErrorData  : function onErrorData(event) {
-				            //error = _process.standardError.readUTFBytes(_process.standardError.bytesAvailable); 
+			  				//var process = processListener.getProcess()
+				            //error = process.standardError.readUTFBytes(process.standardError.bytesAvailable); 
 				        },
 			  		onExit 		 : function onExit(event) {
 			            	//exitCode = event.exitCode;
@@ -146,8 +148,11 @@
       			    log :     _log,
       			    setListener  : function(listenerName, listenerFunction) {
       			    	_listeners[listenerName] = listenerFunction
-      			    	
       			    },
+      			    //Return a reference to the process
+      			    getProcess   : function getProcess() {
+      			    	return _process
+      			    }, 
 			  		init 		 : function init(process) {
 			  		    _process = process
 			  		    //Add in user listeners
@@ -223,12 +228,7 @@
 					process.start(nativeProcessStartupInfo);   
                 },
                 //Do the initial checkout of the repository
-                cloneRepository : function cloneRepository() {
-                     var processListener = new mac.BasicAirListener('git clone')
-                     processListener.setListener('onExit',  function (event) {
-			            //Call the branch function
-			            mac.versions.branchRepository(mac.settings.gitBranchName);
-			         });
+                cloneRepository : function cloneRepository(processListener) {
                 	 //Clone the initial repository
                 	 mac.versions.git(['clone', 
                 	     mac.settings.masterRepository,
@@ -240,18 +240,42 @@
                 	var processListener = new mac.BasicAirListener('git branch');
                 	mac.versions.git(['branch', branchName], processListener);
                 },
-                commit : function commit(processListener) {
+                commit : function commit(message, processListener) {
                 	//Commit our changes to the local repository
                 	//Push from our origin repo to the master
-                	mac.versions.git(['commit', '-a'], processListener)
+                	mac.versions.git(['commit', '-a', '-m', message], processListener)
                 },
                 push : function push(processListener) {
                 	//Push from our origin repo to the master
-                	mac.versions.git(['push', 'origin', 'master'], processListener)
+                	mac.versions.git(['push', 'origin', mac.settings.gitBranchName], processListener)
                 },
 				addDirectory : function addDirectory(directoryPath, processListener){
 					//Add a directory to version control
 					mac.versions.git(['add', directoryPath  + air.File.separator + '\*'], processListener)
+				},
+				//Get a log from git
+				getLog : function getLog(processListener) {
+					format = '--pretty=format:commitHash_:_%H_,_authorName_:_%an_,_authorDate_:_%ad_,_authorTime_:_%at_,_subject_:_%s _END_LINE_'
+					mac.versions.git(['log', format], processListener)
+				},
+				//Parse a log obtained with getLog
+				parseLog : function parseLog(logData) {
+					var items = []
+					var revisions = logData.split('_END_LINE_')
+					for (var i in revisions) {
+					    if (revisions[i].indexOf('_,_') != -1) {
+						    var item = {}
+							var sections = revisions[i].split('_,_')
+							for (var j in sections) {
+							    if (sections[j].indexOf('_:_' != -1)) {
+									var parts = sections[j].split('_:_')
+									item[parts[0]] = parts[1];
+								}
+							}
+							items.push(item)
+						}
+					}
+					return items
 				},
 				startPageant : function startPageant() {
 					//On windows pageant keeps ppk keys in memory which are used by plink to ssh
@@ -325,7 +349,7 @@
 							processListener.setListener('onExit', function (event) {
 								if(event.exitCode == 0) {
 								    var commitListener = new mac.BasicAirListener('git commit')
-									mac.versions.commit(commitListener)
+									mac.versions.commit('Testing..... replace this message with some notes?', commitListener)
 								}
 							});
 							var directory = mac.utilities.getExperimentDirectory(round, experiment)
@@ -365,15 +389,28 @@
 			
 			mac.views.Synchronize = function() {
 			
-				var cloneButton = false
+				var cloneButton = dijit.byId('buttonCloneSubmit')
+				var syncButton = dijit.byId('buttonSyncSubmit')
 				
 				onCloneButtonClick = function() {
-					mac.versions.cloneRepository()
+				
+					 var processListener = new mac.BasicAirListener('git clone')
+                     processListener.setListener('onExit',  function (event) {
+			            //Call the branch function after the clone has finished
+			            mac.versions.branchRepository(mac.settings.gitBranchName);
+			         });
+				
+					mac.versions.cloneRepository(processListener)
+				}
+				
+				onSyncButtonClick = function() {
+					var processListener = new mac.BasicAirListener('git push')
+					mac.versions.push(processListener)
 				}
 				
 				var init = function() {
-					cloneButton = dijit.byId('buttonCloneSubmit')
 					dojo.connect(cloneButton, 'onClick', onCloneButtonClick)
+					dojo.connect(syncButton, 'onClick', onSyncButtonClick)
 				}
 				init()
 			
@@ -396,29 +433,45 @@
 			    var buttonViewRevisionSubmit	= false
 			    var panelCurrentRevisionInfo    = false
 			    
-			    updateRowBasedInfo =  function() {
+			    var updateRowBasedInfo =  function() {
 			    	inputNewRevisionRound.set('value', selectedRow.round)
 			    	inputNewRevisionExperiment.set('value', selectedRow.experiment)
 			    	panelCurrentRevisionInfo.innerHTML = mac.template('templateRevisionListTopInfo', selectedRow)
 			    }
 			    
-			    onGridRowSelected = function() {
+			    var onGridRowSelected = function() {
 			    	var selectedRow = gridRevisions.selection.getFirstSelected()
 					updateRowBasedInfo()
 				}
 				
-				openViewRevision = function() {
+				var openViewRevision = function() {
 					var selectedRow = gridRevisions.selection.getFirstSelected()
 					mac.controllers.main.openSingleRevision(selectedRow)
 				}
 				
-				openNewRevision = function() {
+				var openNewRevision = function() {
 					var experiment 	= inputNewRevisionExperiment.get('value')
 					var round 		= inputNewRevisionRound.get('value')
 					mac.controllers.main.openNewRevision({round: round, experiment: experiment})
 				}
 				
-				init = function () {	 
+				var setRevisionList = function(revisionList){
+					console.log(revisionList)
+				}
+				
+				var loadRevisionList = function() {
+					var processListener = new mac.BasicAirListener('git log')
+					processListener.setListener('onOutputData', function onOutputData(event) {
+							var process = processListener.getProcess()
+				            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
+				            parsedList = mac.versions.parseLog(data)
+				            setRevisionList(parsedList) 
+				        })
+					mac.versions.getLog(processListener)
+				}
+				
+				init = function () {
+					loadRevisionList()
 					gridRevisions 		 		 = dijit.byId('gridRevisions')
 					inputNewRevisionRound 		 = dijit.byId('inputNewRevisionRound')
 					inputNewRevisionExperiment 	 = dijit.byId('inputNewRevisionExperiment')
