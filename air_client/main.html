@@ -57,31 +57,14 @@
 					//Shortcut to show a node
 					nodeShow : function(node) {
 						dojo.style(node, {"visibility" : "visible", "position" : "static"})
-					},
-					//get an experiment directory, returns a path string
-					getExperimentDirectory : function getExperimentDirectory (round, experiment) {
-						dirPath   = 'MacMTMM/repository/round_' + round + '/' + experiment
-						return air.File.documentsDirectory.resolvePath(dirPath).nativePath;
-					},
-					//get an experiment air file object
-					getExperimentFile : function getExperimentFile (round, experiment, fileName) {
-						filePath   = mac.utilities.getExperimentDirectory(round, experiment) + '/'+ fileName
-						return air.File.documentsDirectory.resolvePath(filePath)
-					},
-					//get the experiment file contents firectly
-					getExperimentFileContents : function getExperimentFileContents (round, experiment, fileName) {
-						 var stream = new air.FileStream();
-						 var file = mac.utilities.getExperimentFile(round, experiment, fileName)
-						 stream.open(file, air.FileMode.READ);
-						 var contents = stream.readUTFBytes(stream.bytesAvailable);
-						 stream.close();
-						 return contents
 					}
+					
 				},
 				//Parse a template node using mustache and return the parsed contents
 				template : function(templateId, params) {
 					return Mustache.to_html(dojo.byId(templateId).innerHTML, params)
 				},
+				models : {},
 				views : {},
 				controllers : {}
 			}
@@ -108,70 +91,145 @@
                 var _log = function _log(message) {
 			        	console.log(processName + ' ' + message)
 			        }
-			    
+			        
+			    var listeners = {
+				    onOutputData : function onOutputData(event, process) {
+					            //data =  process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable); 
+					        },
+				  	onErrorData  : function onErrorData(event, process) {
+					            //error = process.standardError.readUTFBytes(process.standardError.bytesAvailable); 
+					        },
+				  	onExit 		 : function onExit(event, process) {
+				            	//exitCode = event.exitCode;
+				        	},
+			  		onIOError 	 :  function onIOError(event, process) {
+			            	//error = event.toString();
+			        	}
+			       }
 			    
 			    //These listeners are internal and for logging
-			    var _loggers = {
-			    	onOutputData : function onOutputData() {
-				            _log("DATA: " + _process.standardOutput.readUTFBytes(_process.standardOutput.bytesAvailable)); 
-				        },
-			  		onErrorData  : function onErrorData(event) {
-				            _log("ERROR: " + _process.standardError.readUTFBytes(_process.standardError.bytesAvailable)); 
-				        },
-			  		onExit 		 : function onExit(event) {
-			            	_log("EXIT: Process exited with code " + event.exitCode);
-			        	},
-			  		onIOError 	 :  function onIOError(event) {
-			            	_log('IOERROR: ' + event.toString());
-			        	}
-			    }
-			    
-			    //These listeners are the ones set by you when you call setListener('onExit' , fucntion(event) {})
 			    var _listeners = {
-			    	onOutputData : function onOutputData(event) {
-			    	        //var process = processListener.getProcess()
-				            //data =  process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable); 
+			    	_onOutputData : function _onOutputData(event) {
+				            _log("DATA: " + _process.standardOutput.readUTFBytes(_process.standardOutput.bytesAvailable)); 
+				       		listeners.onOutputData(event, _process)
 				        },
-			  		onErrorData  : function onErrorData(event) {
-			  				//var process = processListener.getProcess()
-				            //error = process.standardError.readUTFBytes(process.standardError.bytesAvailable); 
+			  		_onErrorData  : function _onErrorData(event) {
+				            _log("ERROR: " + _process.standardError.readUTFBytes(_process.standardError.bytesAvailable)); 
+				       		listeners.onErrorData(event, _process)
 				        },
-			  		onExit 		 : function onExit(event) {
-			            	//exitCode = event.exitCode;
+			  		_onExit 		 : function _onExit(event) {
+			            	_log("EXIT: Process exited with code " + event.exitCode);
+			            	listeners.onExit(event, _process)
 			        	},
-			  		onIOError 	 :  function onIOError(event) {
-			            	//error = event.toString();
+			  		_onIOError 	 :  function _onIOError(event) {
+			            	_log('IOERROR: ' + event.toString());
+			            	listeners.onIOError(event, _process)
 			        	}
 			    }
 			        
       			return  {
       			    log :     _log,
-      			    setListener  : function(listenerName, listenerFunction) {
-      			    	_listeners[listenerName] = listenerFunction
-      			    },
-      			    //Return a reference to the process
-      			    getProcess   : function getProcess() {
-      			    	return _process
-      			    }, 
+      			    listeners : listeners,
 			  		init 		 : function init(process) {
 			  		    _process = process
-			  		    //Add in user listeners
-			            _process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, _listeners['onOutputData']);
-			            _process.addEventListener(air.ProgressEvent.STANDARD_ERROR_DATA, _listeners['onErrorData']);
-			            _process.addEventListener(air.NativeProcessExitEvent.EXIT, _listeners['onExit']);
-			            _process.addEventListener(air.IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, _listeners['onIOError']);
-			            _process.addEventListener(air.IOErrorEvent.STANDARD_ERROR_IO_ERROR, _listeners['onIOError']);
-			        
-			        	//Add in loggers
-			        	_process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, _loggers['onOutputData']);
-			            _process.addEventListener(air.ProgressEvent.STANDARD_ERROR_DATA, _loggers['onErrorData']);
-			            _process.addEventListener(air.NativeProcessExitEvent.EXIT, _loggers['onExit']);
-			            _process.addEventListener(air.IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, _loggers['onIOError']);
-			            _process.addEventListener(air.IOErrorEvent.STANDARD_ERROR_IO_ERROR, _loggers['onIOError']);
+			        	//Add in listeners
+			        	_process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, _listeners._onOutputData);
+			            _process.addEventListener(air.ProgressEvent.STANDARD_ERROR_DATA, _listeners._onErrorData);
+			            _process.addEventListener(air.NativeProcessExitEvent.EXIT, _listeners._onExit);
+			            _process.addEventListener(air.IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, _listeners._onIOError);
+			            _process.addEventListener(air.IOErrorEvent.STANDARD_ERROR_IO_ERROR, _listeners._onIOError);
 			        }
 			  	}
             }
 
+            //////////////////////////////////////////////////////
+			////   EXPERIMENT MANAGERS					  	  ////
+			//////////////////////////////////////////////////////
+            
+            mac.experiments = {
+            	//get an experiment directory, returns a path string
+				getExperimentDirectory : function getExperimentDirectory (round, experiment) {
+					var dirPath   = 'MacMTMM/repository/round_' + round + '/' + experiment
+					return air.File.documentsDirectory.resolvePath(dirPath).nativePath;
+				},
+				//get an experiment air file object
+				getExperimentFile : function getExperimentFile (round, experiment, fileName) {
+					var filePath   = mac.experiments.getExperimentDirectory(round, experiment) + '/'+ fileName
+					return air.File.documentsDirectory.resolvePath(filePath)
+				},
+				//get the experiment file contents firectly
+				getExperimentFileContents : function getExperimentFileContents (round, experiment, fileName) {
+					 var stream = new air.FileStream();
+					 var file = mac.experiments.getExperimentFile(round, experiment, fileName)
+					 stream.open(file, air.FileMode.READ);
+					 var contents = stream.readUTFBytes(stream.bytesAvailable);
+					 stream.close();
+					 return contents
+				},
+				//get all round directories (returns air file objects)
+				getRoundDirectories : function getRounds() {
+					var roundDirs = []
+					var repositoryFolder = air.File.documentsDirectory.resolvePath('MacMTMM/repository')
+					var children = repositoryFolder.getDirectoryListing();
+					for (var i in children) {
+						var child = children[i]
+						if (child.isDirectory) {
+							roundDirs.push(child)
+						}
+					}
+					return roundDirs;
+				},
+				//Get a list of rounds as integers 1, 2, 3 etd
+				getRounds : function getRounds() {
+					var rounds = []
+					var roundDirectories = mac.experiments.getRoundDirectories();
+					for (var i in roundDirectories) {
+						var dirPath = roundDirectories[i].nativePath;
+						if(dirPath.indexOf('round_') != -1) {
+							var round = 1 * dirPath.substr(dirPath.lastIndexOf('_') +1);					
+							rounds.push(round);
+						}
+					}
+					return rounds;
+				},
+				//Get a list of all experiments, returns experiments, returns list of names of experiments
+				getExperiments : function getExperiments(round) {
+					var experiments = []
+					var roundFolder = air.File.documentsDirectory.resolvePath('MacMTMM/repository/round_' + round); 
+					var children = roundFolder.getDirectoryListing();
+					for (var i in children) {
+						var child = children[i]
+						if (child.isDirectory) {
+						    var path = child.nativePath;
+							var experimentName = path.substr(path.lastIndexOf(air.File.separator) + 1);
+							experiments.push(experimentName)
+						}
+					}
+					return experiments;
+				},
+				//Returns a list of experiments with round
+				getAllExperiments: function getExperimentList() { 
+				    var experiments = []
+					var rounds = mac.experiments.getRounds()
+					for (var i in rounds) {
+						var round = rounds[i];
+						var roundExperiments = mac.experiments.getExperiments(round)
+						for (var j in roundExperiments) {
+						    experiment = roundExperiments[j]
+							experiments.push({
+								round : round,
+								experiment : experiment
+							});
+						}
+					}
+					return experiments;
+				},
+				//A helper to find all experiments accross all local branches
+				ExperimentLister : function ExperimentLister() {
+					
+				}
+            }
+            
             
             //////////////////////////////////////////////////////
 			////   LISREL       							  ////
@@ -188,7 +246,7 @@
 					processArgs.push(sourceFileNativePath); 
 					processArgs.push("OUT");
 					nativeProcessStartupInfo.arguments = processArgs; 
-					process = new air.NativeProcess(); 
+					var process = new air.NativeProcess(); 
 					processListener.init(process)
 					process.start(nativeProcessStartupInfo); 
             	},
@@ -196,7 +254,7 @@
 					//Write the model to disk
 					var cr       = air.File.lineEnding;
 					modelContent = modelContent.replace('\n', cr)
-					ls8AirFile = mac.utilities.getExperimentFile(round, experiment, 'INPUT.LS8')
+					ls8AirFile = mac.experiments.getExperimentFile(round, experiment, 'INPUT.LS8')
 	                var fs = new air.FileStream();
 	                fs.open(ls8AirFile, air.FileMode.WRITE);
 	                fs.writeUTFBytes(modelContent);
@@ -239,6 +297,35 @@
                 	//Branch it to settings.branch name
                 	var processListener = new mac.BasicAirListener('git branch');
                 	mac.versions.git(['branch', branchName], processListener);
+                },
+                //Get a list of all local branches
+                getBranchList : function getBranchList(processListener) {
+                	//call git branch with no args 
+                	mac.versions.git(['branch'], processListener);
+                },
+                //Parse a branch list into an array [{'branch' : 'master', 'current' : false}]
+                parseBranchList : function parseBranchList(branchList) {
+                	var current;
+                	var branches = [];
+                	var lines = branchList.split("\n");
+                	for (var i in lines) {
+                		var line = lines[i]
+                		var trimmed = dojo.string.trim(line)
+                		if (trimmed == '') continue;
+                		if( trimmed.indexOf('*') == 0) {
+                			current = true;
+                			trimmed = trimmed.replace('* ', '')
+                		}
+                		else {
+                			current = false;
+                		}
+                		branches.push({branch : trimmed, current : current});
+                	}
+                	return branches;
+                },
+                checkOutBranch : function checkOutBranch(branchName, processListener) {
+                	//call git checkout with branchName
+                	mac.versions.git(['checkout', branchName], processListener);
                 },
                 commit : function commit(message, processListener) {
                 	//Commit our changes to the local repository
@@ -302,11 +389,23 @@
             //////////////////////////////////////////////////////
 			////   MODELS         							  ////
 			//////////////////////////////////////////////////////
-            var RevisionStore = new dojo.data.ItemFileWriteStore({ 
+			
+			//A list of all experiments
+            mac.models.ExperimentStore = new dojo.data.ItemFileReadStore({ 
+             	data : { items : []}
+			});
+			
+			//A list of all revisions of all experiments
+            mac.models.RevisionStore = new dojo.data.ItemFileReadStore({ 
              data : { items : [
 			    { label: 'Study 1 - Experiment 1', round:'1', experiment:'experiment_a',  revision: "2", author:"Willem Saris", date:"January 17th, 2010 at 3:17pm", notes:"Working on the yada yada part" },
 		    	{ label: 'Study 1 - Experiment 2', round:'3', experiment:'another_experiment',  revision: "1", author:"Willem Saris", date:"January 15th, 2010, at 2:25pm", notes:"More yada yada"}
 			]}
+			});
+			
+			//A list of all revisions of all branches
+			mac.models.Branches = new dojo.data.ItemFileReadStore({ 
+             	data : { items : []}
 			});
 			
 			//////////////////////////////////////////////////////
@@ -320,7 +419,6 @@
 				var experiment = params.experiment
 				var round      = params.round
 			
-				//console.log('double clicked ' + event)
 				var tabTitle 	=  experiment + ' (new)' 
 				var tab   = mac.controllers.main.openTab(tabTitle)
 				tab.set('content', mac.template('templateNewRevision', params))
@@ -340,7 +438,7 @@
 					if (exitCode == 0) {
 						//Open up the output file, and check for errors
 						//If we find E_R_R_O_R then we alert the user and show the output
-						var OUT = mac.utilities.getExperimentFileContents(round, experiment, 'OUT')
+						var OUT = mac.experiments.getExperimentFileContents(round, experiment, 'OUT')
 						if (OUT.indexOf('E_R_R_O_R') == -1) {
 							//Success
 							//If the output is ok, then we process it in python to extract the dataset we need						
@@ -352,7 +450,7 @@
 									mac.versions.commit('Testing..... replace this message with some notes?', commitListener)
 								}
 							});
-							var directory = mac.utilities.getExperimentDirectory(round, experiment)
+							var directory = mac.experiments.getExperimentDirectory(round, experiment)
 							mac.versions.addDirectory(directory, processListener)
 						}
 						else {
@@ -413,11 +511,9 @@
 					dojo.connect(syncButton, 'onClick', onSyncButtonClick)
 				}
 				init()
-			
 			}
 			
 			mac.views.singleRevision = function(params) {		
-				//console.log('double clicked ' + event)
 				var tabTitle = params.experiment + ' (' + params.revision + ')'
 				tab = mac.controllers.main.openTab(tabTitle)
 				tab.set('content', 'loading round ' + params.round + ' experiment ' + params.experiment + ' revsion ' + params.revision + '...')
@@ -460,13 +556,12 @@
 				}
 				
 				var loadRevisionList = function() {
-					var processListener = new mac.BasicAirListener('git log')
-					processListener.setListener('onOutputData', function onOutputData(event) {
-							var process = processListener.getProcess()
+					var processListener = new mac.BasicAirListener('git log');
+					processListener.listeners.onOutputData = function (event, process) {
 				            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
 				            parsedList = mac.versions.parseLog(data)
 				            setRevisionList(parsedList) 
-				        })
+				           }
 					mac.versions.getLog(processListener)
 				}
 				
@@ -478,7 +573,7 @@
 					buttonNewRevisionSubmit      = dijit.byId('buttonNewRevisionSubmit')
 					panelCurrentRevisionInfo     = dojo.query('#viewRevisionList .panelCurrentRevisionInfo')[0]
 					buttonViewRevisionSubmit     = dijit.byId('buttonViewRevisionSubmit')
-					gridRevisions.setStore(RevisionStore)  //Set the data store for the grid
+					gridRevisions.setStore(mac.models.RevisionStore)  //Set the data store for the grid
 					gridRevisions.selection.addToSelection(0) //Select our 
 					dojo.connect(gridRevisions, 'onSelected',    onGridRowSelected)
 					dojo.connect(gridRevisions, 'onRowDblClick', openViewRevision)
@@ -664,13 +759,44 @@
 					tabContainerMain.selectChild(tab);
 					return tab
 				},
+				loadAllExperiments : function loadAllExperiments() {
+					console.log('hey there bud.');
+					console.log(mac.models.Branches)
+				},
+				loadBranches : function loadBranches(onComplete) {
+					var processListener = new mac.BasicAirListener('git branch')
+					processListener.listeners.onOutputData = function listener (event, process) {
+					        console.log('hello!!')
+				            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
+				            parsedList = mac.versions.parseBranchList(data)
+				            console.log('list: ' + parsedList)
+				            
+				            for (var i in parsedList) {
+				              console.log('hello!');	
+				            	mac.models.Branches.newItem(parsedList[i]);
+				            }
+				            console.log(typeof(onComplete));
+				            if (typeof(onComplete) != 'undefined') {
+			            		onComplete();
+			            	}
+				        }
+					mac.versions.getBranchList(processListener);
+				},
+				refreshExperimentList : function refreshExperimentList() {
+					mac.controllers.main.loadBranches(function () {
+						console.log('In function!')
+						mac.controllers.main.loadAllExperiments();
+					})
+				},
 				init : function(parentObject) {
 					//Adjust settings
 					mac.settings.localRepository = air.File.documentsDirectory.resolvePath('MacMTMM/repository').nativePath
 					
 					//Start up pageant to keep our ppk key in memory for putty
 					mac.versions.init()
-				
+					
+					mac.controllers.main.refreshExperimentList()
+					
 					//Initialize global items
 					self.tabContainerMain = dijit.byId('tabContainerMain')
 					
@@ -690,12 +816,9 @@
 			dojo.addOnLoad( function() {
 				//Parse dojo widgets out of the applicationBase div
 				dojo.parser.parse(dojo.byId('application'));
+				
 				//Call our main controller to init the application
-				
 				mac.controllers.main.init()
-				
-				
-				console.log(mac.settings.localRepository)
 				
 			});
 	      
@@ -735,7 +858,7 @@
 				           			<button id="buttonNewRevisionSubmit" dojoType="dijit.form.Button" iconClass="dijitIconNewTask" style="margin-left:125px;">Begin New Revision</button>
 				           		</div>
 				           </div>
-				           <table id="gridRevisions" selectionMode="single" store="RevisionStore" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 70%;">
+				           <table id="gridRevisions" selectionMode="single"  dojoType="dojox.grid.DataGrid" style="width: 100%; height: 70%;">
 				           		<thead>
 				           		<tr>
 				           			<th field="round" width="3%">Round</th>
