@@ -28,65 +28,24 @@ mac.controllers.main =  {
 		tabContainerMain.selectChild(tab);
 		return tab
 	},
-	loadAllExperiments : function loadAllExperiments() {
-		mac.models.Branches.fetch({onComplete: function(items, request) {
-			for (var i in items) {
-				console.log(items[i])
-			}
-		}});
-	},
-	loadBranchExperiments : function loadBranchExperiments(branch, onComplete) {
-		var processListener = new mac.BasicAirListener('git ls-tree');
-		processListener.onOutputData = function (event) {
-		    var process = processListener.process;
-            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
-            parsedList = mac.versions.parseBranchFileList(data)
-            processListener.log(mac.models.Branches)
-            for (var i in parsedList) {
-            	mac.models.Branches.newItem(parsedList[i]);
-            }
-            if (typeof(onComplete) != 'undefined') {
-        		onComplete();
-        	}
-        }
-        mac.versions.getBranchList(processListener);
-	},
-	loadBranches : function loadBranches(onComplete) {
-		var processListener = new mac.BasicAirListener('git branch');
-		processListener.onOutputData = function (event) {
-		    var process = processListener.process;
-            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
-            parsedList = mac.versions.parseBranchList(data)
-            processListener.log(mac.models.Branches)
-            for (var i in parsedList) {
-            	mac.models.Branches.newItem(parsedList[i]);
-            }
-            if (typeof(onComplete) != 'undefined') {
-        		onComplete();
-        	}
-        }
-		      
-		mac.versions.getBranchList(processListener);
-	},
-	refreshExperimentList : function refreshExperimentList() {
-		mac.controllers.main.loadBranches(function () {
-			mac.controllers.main.loadAllExperiments();
-		})
-	},
+	
 	init : function(parentObject) {
+		
+		
 		//Adjust settings
 		mac.settings.localRepository = air.File.documentsDirectory.resolvePath('MacMTMM/repository').nativePath
 		
 		//Start up pageant to keep our ppk key in memory for putty
-		mac.versions.init()
+		mac.versions.init();
 		
-		mac.controllers.main.refreshExperimentList();
+		//Refresh the list of experiments
+		mac.experiments.refreshExperimentList();
 		
 		//Initialize global items
-		self.tabContainerMain = dijit.byId('tabContainerMain')
+		self.tabContainerMain = dijit.byId('tabContainerMain');
 		
 		//Connect global items
-		dojo.connect(dijit.byId('buttonSettingsSubmit'), 'onClick', mac.controllers.main.openSettings)
+		dojo.connect(dijit.byId('buttonSettingsSubmit'), 'onClick', mac.controllers.main.openSettings);
 		
 		//Initialize our standard base views
 		mac.views.revisionList()

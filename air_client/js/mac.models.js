@@ -16,6 +16,6 @@ mac.models.RevisionStore = new dojo.data.ItemFileWriteStore({
 });
 
 //A list of all revisions of all branches
-mac.models.Branches = new dojo.data.ItemFileWriteStore({ 
+mac.models.Branch = new dojo.data.ItemFileWriteStore({ 
  	data : { items : []}
 });

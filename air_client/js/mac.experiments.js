@@ -13,7 +13,7 @@ mac.experiments = {
 		var filePath   = mac.experiments.getExperimentDirectory(round, experiment) + '/'+ fileName
 		return air.File.documentsDirectory.resolvePath(filePath)
 	},
-	//get the experiment file contents firectly
+	//get the experiment file contents directly
 	getExperimentFileContents : function getExperimentFileContents (round, experiment, fileName) {
 		 var stream = new air.FileStream();
 		 var file = mac.experiments.getExperimentFile(round, experiment, fileName)
@@ -22,66 +22,78 @@ mac.experiments = {
 		 stream.close();
 		 return contents
 	},
-	//get all round directories (returns air file objects)
-	getRoundDirectories : function getRounds() {
-		var roundDirs = []
-		var repositoryFolder = air.File.documentsDirectory.resolvePath('MacMTMM/repository')
-		var children = repositoryFolder.getDirectoryListing();
-		for (var i in children) {
-			var child = children[i]
-			if (child.isDirectory) {
-				roundDirs.push(child)
+	//Take a parsed list from mac.versions.parseBranchFileList and get all experiments and rounds
+	reduceToExperiments : function reduceToExperiments(list, branchName) {
+		var experiments = [];
+		for (var i in list) {
+			var item = list[i];
+			if(item.objectName.indexOf('round_') == -1) continue;
+			var parts = item.objectName.split('/');
+			var round = 1 * parts[0].substr(parts[0].lastIndexOf('_') +1);
+			var name  = parts[1];				
+			var found = false;
+			for (var j in experiments) {
+				var experiment = experiments[j];
+				if (experiment.round == round && experiment.name == name) {
+					found = true;
+					break;
+				}
 			}
-		}
-		return roundDirs;
-	},
-	//Get a list of rounds as integers 1, 2, 3 etd
-	getRounds : function getRounds() {
-		var rounds = []
-		var roundDirectories = mac.experiments.getRoundDirectories();
-		for (var i in roundDirectories) {
-			var dirPath = roundDirectories[i].nativePath;
-			if(dirPath.indexOf('round_') != -1) {
-				var round = 1 * dirPath.substr(dirPath.lastIndexOf('_') +1);					
-				rounds.push(round);
-			}
-		}
-		return rounds;
-	},
-	//Get a list of all experiments, returns experiments, returns list of names of experiments
-	getExperiments : function getExperiments(round) {
-		var experiments = []
-		var roundFolder = air.File.documentsDirectory.resolvePath('MacMTMM/repository/round_' + round); 
-		var children = roundFolder.getDirectoryListing();
-		for (var i in children) {
-			var child = children[i]
-			if (child.isDirectory) {
-			    var path = child.nativePath;
-				var experimentName = path.substr(path.lastIndexOf(air.File.separator) + 1);
-				experiments.push(experimentName)
-			}
-		}
-		return experiments;
-	},
-	//Returns a list of experiments with round
-	getAllExperiments: function getExperimentList() { 
-	    var experiments = []
-		var rounds = mac.experiments.getRounds()
-		for (var i in rounds) {
-			var round = rounds[i];
-			var roundExperiments = mac.experiments.getExperiments(round)
-			for (var j in roundExperiments) {
-			    experiment = roundExperiments[j]
+			if(!found) {
 				experiments.push({
-					round : round,
-					experiment : experiment
-				});
+					name   : name,
+					round  : round,
+					branch : branchName
+				})
 			}
 		}
 		return experiments;
 	},
-	//A helper to find all experiments accross all local branches
-	ExperimentLister : function ExperimentLister() {
+	//Does some parsing on a branch ls-tree to find rounds and experiments
+	loadExperimentsFromBranch : function loadExperimentsFromBranch(branchName) {
+		var processListener = new mac.BasicAirListener('git ls-tree');
+		processListener.listeners.onOutputData = function(event){
+			var process = processListener.getProcess()
+            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
+            parsedList = mac.versions.parseBranchFileList(data)
+			var experiments = mac.experiments.reduceToExperiments(parsedList, branchName)
+			console.log(experiments)
+		}
+		mac.versions.getBranchFileList(branchName, processListener);
+	},
+	loadRemoteExperiments : function loadRemoteExperiments() {
+		mac.models.Branch.fetch({onComplete: function(items, request) {
+			for (var i in items) {
+				var branchName = items[i].name;
+				if (banchName == 'origin/' + mac.settings.branchName) continue;
+				mac.experiments.loadExperimentsFromBranch(branchName);
+			}
+		}});
+	},
+	loadRemoteBranches : function loadBranches(onComplete) {
+		var processListener = new mac.BasicAirListener('git branch');
+		processListener.listeners.onOutputData = function (event) {
+		    var process = processListener.getProcess()
+            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
+            parsedList = mac.versions.parseRemoteBranchList(data)
+            for (var i in parsedList) {
+				var branchName = parsedList[i]
+            	mac.models.Branch.newItem({name : branchName});
+            }
+            if (typeof(onComplete) != 'undefined') {
+        		onComplete();
+        	}
+        }
+		mac.versions.getRemoteBranchList(processListener);
+	},
+	refreshExperimentList : function refreshExperimentList() {
+		//Load local data
+		mac.experiments.loadExperimentsFromBranch(mac.settings.gitBranchName);
 		
-	}
+		//Load remote data
+		mac.experiments.loadRemoteBranches(function () {
+			//After the branches are loaded, then loop through the branches and get experiments
+			mac.experiments.loadRemoteExperiments();
+		})
+	},
 }

@@ -17,15 +17,16 @@ mac.lisrel = {
 		processListener.init(process)
 		process.start(nativeProcessStartupInfo); 
 	},
+	
 	saveModelToFile : function saveModelToFile(round, experiment, modelContent) {
 		//Write the model to disk
 		var cr       = air.File.lineEnding;
 		modelContent = modelContent.replace('\n', cr)
 		ls8AirFile = mac.experiments.getExperimentFile(round, experiment, 'INPUT.LS8')
-        var fs = new air.FileStream();
-        fs.open(ls8AirFile, air.FileMode.WRITE);
-        fs.writeUTFBytes(modelContent);
-        fs.close();
-        return ls8AirFile 
+		var fs = new air.FileStream();
+		fs.open(ls8AirFile, air.FileMode.WRITE);
+		fs.writeUTFBytes(modelContent);
+		fs.close();
+		return ls8AirFile 
 	}
 }

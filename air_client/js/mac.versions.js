@@ -19,7 +19,7 @@ mac.versions = {
 		var process = new air.NativeProcess();
 		processListener.init(process);
 		process.start(nativeProcessStartupInfo);   
-		processListener.log('Process Started')
+		processListener.log('Calling:: git ' + args.join(' '));
     },
     //Do the initial checkout of the repository
     cloneRepository : function cloneRepository(processListener) {
@@ -35,28 +35,25 @@ mac.versions = {
     	mac.versions.git(['branch', branchName], processListener);
     },
     //Get a list of all local branches
-    getBranchList : function getBranchList(processListener) {
+    getRemoteBranchList : function getBranchList(processListener) {
     	//call git branch with no args 
-    	mac.versions.git(['branch'], processListener);
+    	mac.versions.git(['branch', '-r'], processListener);
     },
-    //Parse a branch list into an array [{'branch' : 'master', 'current' : false}]
-    parseBranchList : function parseBranchList(branchList) {
+    //Parse a branch list into an array of branchNames
+    parseRemoteBranchList : function parseBranchList(branchList) {
     	var current;
     	var branches = [];
     	var lines = branchList.split("\n");
     	for (var i in lines) {
     		var line = lines[i]
-    		var trimmed = dojo.string.trim(line)
-    		if (trimmed == '') continue;
-    		if( trimmed.indexOf('*') == 0) {
-    			current = true;
-    			trimmed = trimmed.replace('* ', '')
-    		}
-    		else {
-    			current = false;
-    		}
-    		branches.push({branch : trimmed, current : current});
+    		var branchName = dojo.string.trim(line)
+			//Skip empty lines
+    		if (branchName == '') continue;
+			//Skip this line origin/HEAD -> origin/master
+			if (branchName.indexOf('origin/HEAD') != -1) continue;
+    		branches.push(branchName);
     	}
+		console.log(branches)
     	return branches;
     },
     checkOutBranch : function checkOutBranch(branchName, processListener) {
@@ -75,57 +72,69 @@ mac.versions = {
 	addDirectory : function addDirectory(directoryPath, processListener){
 		//Add a directory to version control
 		mac.versions.git(['add', directoryPath  + air.File.separator + '\*'], processListener)
-				},
-				//Get a log from git
-				getLog : function getLog(processListener) {
-					format = '--pretty=format:commitHash_:_%H_,_authorName_:_%an_,_authorDate_:_%ad_,_authorTime_:_%at_,_subject_:_%s _END_LINE_'
-					mac.versions.git(['log', format], processListener)
-				},
-				//Get a list of all files inside a branch
-				getBranchFileList : function getBranchFileList(branchName, processListener) {
-					mac.versions.git(['ls-tree', '-r', branchName], processListener)
-				},
-				//Returns an object list from the results of getBranchFileList
-				parseBranchFileList: function(fileList) {
-					//
-				},
-				//Parse a log obtained with getLog
-				parseLog : function parseLog(logData) {
-					var items = []
-					var revisions = logData.split('_END_LINE_')
-					for (var i in revisions) {
-					    if (revisions[i].indexOf('_,_') != -1) {
-						    var item = {}
-							var sections = revisions[i].split('_,_')
-							for (var j in sections) {
-							    if (sections[j].indexOf('_:_' != -1)) {
-									var parts = sections[j].split('_:_')
-									item[parts[0]] = parts[1];
-								}
-							}
-							items.push(item)
-						}
+	},
+	//Get a log from git
+	getLog : function getLog(processListener) {
+		var format = '--pretty=format:commitHash_:_%H_,_authorName_:_%an_,_authorDate_:_%ad_,_authorTime_:_%at_,_subject_:_%s _END_LINE_'
+		mac.versions.git(['log', format], processListener)
+	},
+	//Get a list of all files inside a branch
+	getBranchFileList : function getBranchFileList(branchName, processListener) {
+		mac.versions.git(['ls-tree', '-r', branchName], processListener)
+	},
+	//Returns an object list from the results of getBranchFileList
+	parseBranchFileList: function(fileList) {
+		var files = []
+		var lines = fileList.split("\n")
+		for (var i in lines) {
+			if (lines[i].indexOf("\t") == -1) continue;
+			var parts   = lines[i].split("\t");
+			var details = parts[0].split(" ");
+			files.push({
+				type    	: details[1],
+				SHA     	: details[2],
+				objectName  : parts[1]
+			})
+		}
+		return files;
+	},
+	//Parse a log obtained with getLog
+	parseLog : function parseLog(logData) {
+		var items = []
+		var revisions = logData.split('_END_LINE_')
+		for (var i in revisions) {
+		    if (revisions[i].indexOf('_,_') != -1) {
+			    var item = {}
+				var sections = revisions[i].split('_,_')
+				for (var j in sections) {
+				    if (sections[j].indexOf('_:_' != -1)) {
+						var parts = sections[j].split('_:_')
+						item[parts[0]] = parts[1];
 					}
-					return items
-				},
-				startPageant : function startPageant() {
-					//On windows pageant keeps ppk keys in memory which are used by plink to ssh
-					//This calls pageant with the My Documents/MacMTMM/mac.ppk so that no 
-					//password or further interaction with git on windows is needed
-					var nativeProcessStartupInfo = new air.NativeProcessStartupInfo();
-		            var file = air.File.applicationDirectory.resolvePath("putty/pageant.exe");
-		            var ppkFile = air.File.documentsDirectory.resolvePath('MacMTMM/mac.ppk');
-		            var processArgs = new air.Vector["<String>"](); 
-					processArgs.push(ppkFile.nativePath);
-					nativeProcessStartupInfo.arguments = processArgs;
-		            nativeProcessStartupInfo.executable = file;
-		            var process = new air.NativeProcess();
-		            var processListener = new mac.BasicAirListener('pageant')
-		            processListener.init(process)
-		            process.start(nativeProcessStartupInfo);
-		  		},
-				init : function init() {
-					//Setup the environment
-					mac.versions.startPageant()
 				}
-            }
+				items.push(item)
+			}
+		}
+		return items
+	},
+	startPageant : function startPageant() {
+		//On windows pageant keeps ppk keys in memory which are used by plink to ssh
+		//This calls pageant with the My Documents/MacMTMM/mac.ppk so that no 
+		//password or further interaction with git on windows is needed
+		var nativeProcessStartupInfo = new air.NativeProcessStartupInfo();
+        var file = air.File.applicationDirectory.resolvePath("putty/pageant.exe");
+        var ppkFile = air.File.documentsDirectory.resolvePath('MacMTMM/mac.ppk');
+        var processArgs = new air.Vector["<String>"](); 
+		processArgs.push(ppkFile.nativePath);
+		nativeProcessStartupInfo.arguments = processArgs;
+        nativeProcessStartupInfo.executable = file;
+        var process = new air.NativeProcess();
+        var processListener = new mac.BasicAirListener('pageant')
+        processListener.init(process)
+        process.start(nativeProcessStartupInfo);
+		},
+	init : function init() {
+		//Setup the environment
+		mac.versions.startPageant()
+	}
+}

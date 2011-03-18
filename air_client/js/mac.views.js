@@ -148,12 +148,13 @@ mac.views.revisionList = function () {
 	
 	var loadRevisionList = function() {
 	    var processListener = new mac.BasicAirListener('git log')
-	    processListener.onOutputData = function (event) {
-	                     var process = processListener.process
+	    processListener.listeners.onOutputData = function (event) {
+	                     var process = processListener.getProcess()
 			             var data    = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
 	            		 parsedList  = mac.versions.parseLog(data)
 	            		 setRevisionList(parsedList) 
 		            }
+					
 		mac.versions.getLog(processListener)
 	}
 	
@@ -211,112 +212,111 @@ mac.views.compareBase = function() {
         });
 	}
 	
-				onCompareSubmit = function() {
-					mac.controllers.main.openCompareRevisions(
-						{fromRevision : 61,
-					  	 toRevision   : 62}
-					)
-				}
-				
-				init = function() {
-					buttonCompareSubmit         = dijit.byId('buttonCompareSubmit')
-					dojo.connect(buttonCompareSubmit , 'onClick', onCompareSubmit)
-				}
-				init()
+	onCompareSubmit = function() {
+		mac.controllers.main.openCompareRevisions(
+			{fromRevision : 61,
+		  	 toRevision   : 62}
+		)
+	}
+	
+	init = function() {
+		buttonCompareSubmit         = dijit.byId('buttonCompareSubmit')
+		dojo.connect(buttonCompareSubmit , 'onClick', onCompareSubmit)
+	}
+	init()
+}
+	
+mac.views.compareRevisions = function (params) {
+	
+	tabTitle = 'experiment_2 (' + params.fromRevision + ' vs ' + params.toRevision + ')'
+	tab = mac.controllers.main.openTab(tabTitle)
+	tab.set('content', mac.template('templateCompareRevisions', params))
+	
+	gridDiff 			  = mac.utilities.getTabDijit(".gridDiff", tab)
+	selectFilterCountry   = mac.utilities.getTabDijit(".selectFilterCountry", tab)
+	selectFilterGroup     = mac.utilities.getTabDijit(".selectFilterGroup", tab)
+	selectFilterParamater = mac.utilities.getTabDijit(".selectFilterParamater", tab)
+	spinnerMinDifference  = mac.utilities.getTabDijit(".spinnerMinDifference", tab)
+	
+	allItems =  [
+	    { country: 'Ireland', group:'group_1', paramater: 'sd1', RevisionFrom : 0.20, RevisionTo: 0.98},
+		{ country: 'France',  group:'group_1', paramater: 'sd2', RevisionFrom : 0.10, RevisionTo: 0.76},
+		{ country: 'France',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.30, RevisionTo: 0.34},
+		{ country: 'England',  group:'group_12', paramater: 'sd3', RevisionFrom : 0.10, RevisionTo: 0.45},
+		{ country: 'England',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.87},
+		{ country: 'England',  group:'group_2', paramater: 'sd2', RevisionFrom : 0.10, RevisionTo: 0.28},
+		{ country: 'England',  group:'group_2', paramater: 'sd3', RevisionFrom : 0.60, RevisionTo: 0.56},
+		{ country: 'England',  group:'group_1', paramater: 'sd4', RevisionFrom : 0.18, RevisionTo: 0.29},
+		{ country: 'France',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.14, RevisionTo: 0.28},
+		{ country: 'France',  group:'group_1', paramater: 'sd2', RevisionFrom : 0.12, RevisionTo: 0.42},
+		{ country: 'Never Never Land',  group:'group_1', paramater: 'sd3', RevisionFrom : 0.90, RevisionTo: 0.13},
+		{ country: 'Never Never Land',  group:'group_2', paramater: 'sd4', RevisionFrom : 0.80, RevisionTo: 0.33},
+		{ country: 'Never Never Land',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.70, RevisionTo: 0.23},
+		{ country: 'Never Never Land',  group:'group_2', paramater: 'sd5', RevisionFrom : 0.10, RevisionTo: 0.43},
+		{ country: 'Never Never Land',  group:'group_1', paramater: 'sd3', RevisionFrom : 0.50, RevisionTo: 0.23},
+		{ country: 'Never Never Land',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.40, RevisionTo: 0.63},
+		{ country: 'France',  group:'group_3', paramater: 'sd2', RevisionFrom : 0.20, RevisionTo: 0.43},
+		{ country: 'France',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.23},
+		{ country: 'Somalia',  group:'group_2', paramater: 'sd3', RevisionFrom : 0.30, RevisionTo: 0.63},
+		{ country: 'Somalia',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.23},
+		{ country: 'Somalia',  group:'group_3', paramater: 'sd2', RevisionFrom : 0.40, RevisionTo: 0.53},
+		{ country: 'Germany', group:'group_2', paramater: 'sd4', RevisionFrom : 0.13, RevisionTo: 0.15}
+	]
+	
+	//Calculate the difference between each item
+	for (i in allItems) {
+	    difference = Math.abs(allItems[i]['RevisionFrom'] - allItems[i]['RevisionTo'])
+	    difference = Math.ceil(difference * 100) / 100
+		allItems[i]['difference'] = difference
+	}
+	
+	var storeAll = new dojo.data.ItemFileWriteStore({ 
+     data : { items: allItems}
+	});
+	
+	//Assign the datastores to the different widgets
+	setFromUniqueStore(storeAll, 'country',   		selectFilterCountry)
+	setFromUniqueStore(storeAll, 'group',     		selectFilterGroup)
+	setFromUniqueStore(storeAll, 'paramater', 		selectFilterParamater)
+	
+	updateFilter = function () {
+		filterParams = {}
+		country    = selectFilterCountry.get('displayedValue')
+		group      = selectFilterGroup.get('displayedValue')
+		paramater  = selectFilterParamater.get('displayedValue')	
+		if (country != '')   filterParams['country'] 	 = country
+		if (group != '') 	 filterParams['group'] 		 = group
+		if (paramater != '') filterParams['paramater']   = paramater
+		gridDiff.filter(filterParams)
+	}
+	
+	//It would be nice to avoid this function, but I don't know how to filter a grid by greater than
+	//Must be possible but hard to find an example so here we always create a new item store
+	updateGridStoreLastValue = null
+	updateGridStore = function() {
+		//Make a sub selection of items to add to the grid, having a difference greater than a certain value 
+		inRangeItems = []
+		minValue  = spinnerMinDifference.get('value')
+		if (minValue == updateGridStoreLastValue) return true; //pass if no change
+		for (i in allItems) {
+			item = allItems[i]
+			if (item.difference > minValue){
+				inRangeItems.push(item)
 			}
-			
-			mac.views.compareRevisions = function (params) {
-				
-				tabTitle = 'experiment_2 (' + params.fromRevision + ' vs ' + params.toRevision + ')'
-				tab = mac.controllers.main.openTab(tabTitle)
-				tab.set('content', mac.template('templateCompareRevisions', params))
-				
-				gridDiff 			  = mac.utilities.getTabDijit(".gridDiff", tab)
-				selectFilterCountry   = mac.utilities.getTabDijit(".selectFilterCountry", tab)
-				selectFilterGroup     = mac.utilities.getTabDijit(".selectFilterGroup", tab)
-				selectFilterParamater = mac.utilities.getTabDijit(".selectFilterParamater", tab)
-				spinnerMinDifference  = mac.utilities.getTabDijit(".spinnerMinDifference", tab)
-				
-				allItems =  [
-				    { country: 'Ireland', group:'group_1', paramater: 'sd1', RevisionFrom : 0.20, RevisionTo: 0.98},
-					{ country: 'France',  group:'group_1', paramater: 'sd2', RevisionFrom : 0.10, RevisionTo: 0.76},
-					{ country: 'France',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.30, RevisionTo: 0.34},
-					{ country: 'England',  group:'group_12', paramater: 'sd3', RevisionFrom : 0.10, RevisionTo: 0.45},
-					{ country: 'England',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.87},
-					{ country: 'England',  group:'group_2', paramater: 'sd2', RevisionFrom : 0.10, RevisionTo: 0.28},
-					{ country: 'England',  group:'group_2', paramater: 'sd3', RevisionFrom : 0.60, RevisionTo: 0.56},
-					{ country: 'England',  group:'group_1', paramater: 'sd4', RevisionFrom : 0.18, RevisionTo: 0.29},
-					{ country: 'France',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.14, RevisionTo: 0.28},
-					{ country: 'France',  group:'group_1', paramater: 'sd2', RevisionFrom : 0.12, RevisionTo: 0.42},
-					{ country: 'Never Never Land',  group:'group_1', paramater: 'sd3', RevisionFrom : 0.90, RevisionTo: 0.13},
-					{ country: 'Never Never Land',  group:'group_2', paramater: 'sd4', RevisionFrom : 0.80, RevisionTo: 0.33},
-					{ country: 'Never Never Land',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.70, RevisionTo: 0.23},
-					{ country: 'Never Never Land',  group:'group_2', paramater: 'sd5', RevisionFrom : 0.10, RevisionTo: 0.43},
-					{ country: 'Never Never Land',  group:'group_1', paramater: 'sd3', RevisionFrom : 0.50, RevisionTo: 0.23},
-					{ country: 'Never Never Land',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.40, RevisionTo: 0.63},
-					{ country: 'France',  group:'group_3', paramater: 'sd2', RevisionFrom : 0.20, RevisionTo: 0.43},
-					{ country: 'France',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.23},
-					{ country: 'Somalia',  group:'group_2', paramater: 'sd3', RevisionFrom : 0.30, RevisionTo: 0.63},
-					{ country: 'Somalia',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.23},
-					{ country: 'Somalia',  group:'group_3', paramater: 'sd2', RevisionFrom : 0.40, RevisionTo: 0.53},
-					{ country: 'Germany', group:'group_2', paramater: 'sd4', RevisionFrom : 0.13, RevisionTo: 0.15}
-				]
-				
-				//Calculate the difference between each item
-				for (i in allItems) {
-				    difference = Math.abs(allItems[i]['RevisionFrom'] - allItems[i]['RevisionTo'])
-				    difference = Math.ceil(difference * 100) / 100
-					allItems[i]['difference'] = difference
-				}
-				
-				var storeAll = new dojo.data.ItemFileWriteStore({ 
-	             data : { items: allItems}
-				});
-				
-				//Assign the datastores to the different widgets
-				setFromUniqueStore(storeAll, 'country',   		selectFilterCountry)
-				setFromUniqueStore(storeAll, 'group',     		selectFilterGroup)
-				setFromUniqueStore(storeAll, 'paramater', 		selectFilterParamater)
-				
-				updateFilter = function () {
-					filterParams = {}
-					country    = selectFilterCountry.get('displayedValue')
-					group      = selectFilterGroup.get('displayedValue')
-					paramater  = selectFilterParamater.get('displayedValue')	
-					if (country != '')   filterParams['country'] 	 = country
-					if (group != '') 	 filterParams['group'] 		 = group
-					if (paramater != '') filterParams['paramater']   = paramater
-					gridDiff.filter(filterParams)
-				}
-				
-				//It would be nice to avoid this function, but I don't know how to filter a grid by greater than
-				//Must be possible but hard to find an example so here we always create a new item store
-				updateGridStoreLastValue = null
-				updateGridStore = function() {
-					//Make a sub selection of items to add to the grid, having a difference greater than a certain value 
-					inRangeItems = []
-					minValue  = spinnerMinDifference.get('value')
-					if (minValue == updateGridStoreLastValue) return true; //pass if no change
-					for (i in allItems) {
-						item = allItems[i]
-						if (item.difference > minValue){
-							inRangeItems.push(item)
-						}
-					}
-					var storeInRange = new dojo.data.ItemFileWriteStore({ 
-		             	data : { items: inRangeItems}
-					});
-					gridDiff.setStore(storeInRange)
-					updateFilter()
-					udpateGridStoreLastValue = minValue
-				}
-				
-				updateGridStore()
-				dojo.connect(spinnerMinDifference,  'onClick',   updateGridStore)
-				dojo.connect(spinnerMinDifference,  'onChange',  updateGridStore)
-				dojo.connect(spinnerMinDifference,  'onKeyDown', updateGridStore)
-				dojo.connect(selectFilterCountry,   'onChange',  updateFilter)
-				dojo.connect(selectFilterGroup, 	'onChange',  updateFilter)
-				dojo.connect(selectFilterParamater, 'onChange',  updateFilter)
-			}
-			
+		}
+		var storeInRange = new dojo.data.ItemFileWriteStore({ 
+         	data : { items: inRangeItems}
+		});
+		gridDiff.setStore(storeInRange)
+		updateFilter()
+		udpateGridStoreLastValue = minValue
+	}
+	
+	updateGridStore()
+	dojo.connect(spinnerMinDifference,  'onClick',   updateGridStore)
+	dojo.connect(spinnerMinDifference,  'onChange',  updateGridStore)
+	dojo.connect(spinnerMinDifference,  'onKeyDown', updateGridStore)
+	dojo.connect(selectFilterCountry,   'onChange',  updateFilter)
+	dojo.connect(selectFilterGroup, 	'onChange',  updateFilter)
+	dojo.connect(selectFilterParamater, 'onChange',  updateFilter)
+}
