@@ -1,3 +1,7 @@
+ //This is a build profile for dojo
+ //In order to build mac.dojo.build.js
+ //See http://dojotoolkit.org/reference-guide/build/ for more information
+ 
  dependencies ={
    action : 'clean,release',
    optimize : 'shrinksafe',
@@ -24,4 +28,3 @@
        }
    ]
  };
- 
