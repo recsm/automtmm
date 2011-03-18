@@ -15,5 +15,4 @@ mac.utilities = {
 	nodeShow : function(node) {
 		dojo.style(node, {"visibility" : "visible", "position" : "static"})
 	}
-	
 }

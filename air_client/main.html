@@ -84,7 +84,6 @@
 				
 				//Call our main controller to init the application
 				mac.controllers.main.init()
-				
 			});
 	      
         </script>
@@ -102,13 +101,12 @@
 	    		</div>
 	    		<div dojoType="dijit.layout.ContentPane" layoutAlign="client" style="padding:0px 2px;">
 				    <div id="tabContainerMain" dojoType="dijit.layout.TabContainer" style="width: 100%; height: 100%;">
-				        <div id="viewRevisionList" dojoType="dijit.layout.ContentPane" title="Model Revisions" selected="true">
+				        <div id="viewExperimentList" dojoType="dijit.layout.ContentPane" title="Experiments" selected="true">
 				           <div style="height:30%">
 				           		<div  style="float:left;width:68%"> 
-				           		 	<h3>Model Revisions</h3>
-				           			<div class="panelCurrentRevisionInfo">
+				           		 	<h3>Experiments</h3>
+				           			<div class="panelCurrentExperimentInfo">
 				           			</div>
-				           			<button id="buttonViewRevisionSubmit" dojoType="dijit.form.Button" >View Revision</button>
 				           		</div>
 				           		<div style="float:right;width:30%"> 
 				           			<h3>New Revision</h3>
@@ -123,15 +121,12 @@
 				           			<button id="buttonNewRevisionSubmit" dojoType="dijit.form.Button" iconClass="dijitIconNewTask" style="margin-left:125px;">Begin New Revision</button>
 				           		</div>
 				           </div>
-				           <table id="gridRevisions" selectionMode="single"  dojoType="dojox.grid.DataGrid" style="width: 100%; height: 70%;">
+				           <table id="gridExperiments" selectionMode="single" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 70%;">
 				           		<thead>
 				           		<tr>
-				           			<th field="round" width="3%">Round</th>
-				           			<th field="experiment" width="10%">Experiment</th>
-				           			<th field="revision" width="5%">Revision</th>
-				           			<th field="author" width="10%">Author</th>
-				           			<th field="date" width="15%">Date</th>
-				           			<th field="notes" width="30%">Notes</th>
+				           			<th field="round" width="10%">Round</th>
+				           			<th field="name" width="45%">Experiment</th>
+				           			<th field="branch" width="45%">Branch</th>
 				           		</tr>
 				           		</thead>
 				           </table>
@@ -185,14 +180,11 @@
 			</div>
 		</div>
 		
-		
-		
-		<script id="templateRevisionListTopInfo" type="template/mustache">
-	    	<h4> Round {{round }} experiment {{experiment}}</h4>
-	    	<p>Revision {{revision}} created by {{author}} on {{date}}</p>
+		<script id="templateExperimentListTopInfo" type="template/mustache">
+	    	<h4>Selected Experiment</h4>
+	    	<p>Round {{round }} experiment {{name}}</p>
+	    	<button id="buttonViewExperimentSubmit" dojoType="dijit.form.Button" >View Experiment Details</button>
 		</script>
-		
-		
 		
 		<script id="templateNewRevision" type="template/mustache">
 			<div class="newRevisionCompose">
@@ -212,7 +204,27 @@
 			</div>
 		</script>
 		
-		
+		<script id="experimentDetails" type="template/mustache">
+			<div style="height:97%">
+				<div style="height:22%">
+				  <h3>Experiment Details</h3>
+				  <h4>Experiment {{experiment}} - Round {{round}}</h4>
+				</div>
+				<h4>Revisions</h4>
+				<div style="height:60%">
+				<table style="clear:left" class="gridExperimentRevisions" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 100%;">
+		          <thead>
+		            <tr>
+		              <th field="author" width="10%">Author</th>
+		              <th field="date" width="10%">Date</th>
+		              <th field="revision" width="10%">Revision</th>
+		              <th field="brance" width="10%">Branch</th>
+		          	 </tr>
+		          </thead>
+		        </table>
+		        </div>
+	        </div>
+		</script> 
 		
 		<script id="templateCompareRevisions" type="template/mustache">
 			<div style="height:97%">

@@ -3,17 +3,17 @@
 //////////////////////////////////////////////////////
 
 mac.experiments = {
-	//get an experiment directory, returns a path string
+	//get a local experiment directory, returns a path string
 	getExperimentDirectory : function getExperimentDirectory (round, experiment) {
 		var dirPath   = 'MacMTMM/repository/round_' + round + '/' + experiment
 		return air.File.documentsDirectory.resolvePath(dirPath).nativePath;
 	},
-	//get an experiment air file object
+	//get a local experiment air file object
 	getExperimentFile : function getExperimentFile (round, experiment, fileName) {
 		var filePath   = mac.experiments.getExperimentDirectory(round, experiment) + '/'+ fileName
 		return air.File.documentsDirectory.resolvePath(filePath)
 	},
-	//get the experiment file contents directly
+	//gets local experiment file contents directly
 	getExperimentFileContents : function getExperimentFileContents (round, experiment, fileName) {
 		 var stream = new air.FileStream();
 		 var file = mac.experiments.getExperimentFile(round, experiment, fileName)
@@ -49,6 +49,10 @@ mac.experiments = {
 		}
 		return experiments;
 	},
+	//Get single experiment revisions from a branch experiment
+	getExperimentRevisions : function (round, experiment) {
+		
+	},
 	//Does some parsing on a branch ls-tree to find rounds and experiments
 	loadExperimentsFromBranch : function loadExperimentsFromBranch(branchName) {
 		var processListener = new mac.BasicAirListener('git ls-tree');
@@ -57,10 +61,16 @@ mac.experiments = {
             var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
             parsedList = mac.versions.parseBranchFileList(data)
 			var experiments = mac.experiments.reduceToExperiments(parsedList, branchName)
-			console.log(experiments)
+			for (var i in experiments) {
+				var item = experiments[i];
+				if(!mac.models.Experiment.isItem(item)) {
+					mac.models.Experiment.newItem(item);	
+				}
+			}
 		}
 		mac.versions.getBranchFileList(branchName, processListener);
 	},
+	//Get experiments on the origin server, except for our local branch origin
 	loadRemoteExperiments : function loadRemoteExperiments() {
 		mac.models.Branch.fetch({onComplete: function(items, request) {
 			for (var i in items) {
@@ -71,6 +81,7 @@ mac.experiments = {
 			}
 		}});
 	},
+	//Get's a list of remote branches
 	loadRemoteBranches : function loadBranches(onComplete) {
 		var processListener = new mac.BasicAirListener('git branch');
 		processListener.listeners.onOutputData = function (event) {
@@ -87,6 +98,7 @@ mac.experiments = {
         }
 		mac.versions.getRemoteBranchList(processListener);
 	},
+	//Reload the list of experiments
 	refreshExperimentList : function refreshExperimentList() {
 		//Load local data
 		mac.experiments.loadExperimentsFromBranch(mac.settings.gitBranchName);

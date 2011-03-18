@@ -15,6 +15,9 @@ mac.controllers.main =  {
 	openCompareRevisions : function(params) {
 		new mac.views.compareRevisions(params)
 	},
+	openExperimentDetails : function (params) {
+		new mac.views.ExperimentDetails(params);
+	},
 	//Show the settings
 	openSettings : function ()
 	{
@@ -48,7 +51,7 @@ mac.controllers.main =  {
 		dojo.connect(dijit.byId('buttonSettingsSubmit'), 'onClick', mac.controllers.main.openSettings);
 		
 		//Initialize our standard base views
-		mac.views.revisionList()
+		mac.views.experimentList()
 		mac.views.compareBase()
 		mac.views.Synchronize()
 		

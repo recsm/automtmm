@@ -110,30 +110,37 @@ mac.views.singleRevision = function(params) {
 	tab.set('content', 'loading round ' + params.round + ' experiment ' + params.experiment + ' revsion ' + params.revision + '...')
 }	
 
-//Revision List View (Home)
-mac.views.revisionList = function () {
-    var gridRevisions			 	= false
-    var inputNewRevisionRound 	    = false
-    var inputNewRevisionExperiment  = false
-    var selectedRow                 = false
-    var buttonNewRevisionSubmit		= false
-    var buttonViewRevisionSubmit	= false
-    var panelCurrentRevisionInfo    = false
+//Experiment List View (Home)
+mac.views.experimentList = function () {
+    var gridExperiments			 		= false
+    var inputNewRevisionRound 	    	= false
+    var inputNewRevisionExperiment  	= false
+    var selectedRow                 	= false
+    var buttonNewRevisionSubmit			= false
+    var buttonViewRevisionSubmit		= false
+    var panelCurrentExperimentInfo    	= false
     
     var updateRowBasedInfo =  function() {
+		try {
+			dijit.byId('buttonViewExperimentSubmit').destroy()
+		} catch(e) {}
     	inputNewRevisionRound.set('value', selectedRow.round)
-    	inputNewRevisionExperiment.set('value', selectedRow.experiment)
-    	panelCurrentRevisionInfo.innerHTML = mac.template('templateRevisionListTopInfo', selectedRow)
+    	inputNewRevisionExperiment.set('value', selectedRow.name)
+    	panelCurrentExperimentInfo.innerHTML = mac.template('templateExperimentListTopInfo', selectedRow)
+		dojo.parser.parse(panelCurrentExperimentInfo);
+		buttonViewExperimentSubmit   = dijit.byId('buttonViewExperimentSubmit');
+		dojo.connect(buttonViewExperimentSubmit , 'onClick', openViewExperiment);
     }
     
     var onGridRowSelected = function() {
-    	var selectedRow = gridRevisions.selection.getFirstSelected()
+    	selectedRow = gridExperiments.selection.getFirstSelected()
 		updateRowBasedInfo()
 	}
 	
-	var openViewRevision = function() {
-		var selectedRow = gridRevisions.selection.getFirstSelected()
-		mac.controllers.main.openSingleRevision(selectedRow)
+	var openViewExperiment = function() {
+		//Todo - rewrite in order to get experiment details
+		selectedRow = gridExperiments.selection.getFirstSelected()
+		mac.controllers.main.openExperimentDetails({round : selectedRow.round, experiment : selectedRow.name})
 	}
 	
 	var openNewRevision = function() {
@@ -142,40 +149,30 @@ mac.views.revisionList = function () {
 		mac.controllers.main.openNewRevision({round: round, experiment: experiment})
 	}
 	
-	var setRevisionList = function(revisionList){
-		console.log(revisionList)
-	}
-	
-	var loadRevisionList = function() {
-	    var processListener = new mac.BasicAirListener('git log')
-	    processListener.listeners.onOutputData = function (event) {
-	                     var process = processListener.getProcess()
-			             var data    = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
-	            		 parsedList  = mac.versions.parseLog(data)
-	            		 setRevisionList(parsedList) 
-		            }
-					
-		mac.versions.getLog(processListener)
-	}
-	
 	init = function () {
-		loadRevisionList()
-		gridRevisions 		 		 = dijit.byId('gridRevisions')
+		gridExperiments 		     = dijit.byId('gridExperiments')
 		inputNewRevisionRound 		 = dijit.byId('inputNewRevisionRound')
 		inputNewRevisionExperiment 	 = dijit.byId('inputNewRevisionExperiment')
 		buttonNewRevisionSubmit      = dijit.byId('buttonNewRevisionSubmit')
-		panelCurrentRevisionInfo     = dojo.query('#viewRevisionList .panelCurrentRevisionInfo')[0]
-		buttonViewRevisionSubmit     = dijit.byId('buttonViewRevisionSubmit')
-		gridRevisions.setStore(mac.models.RevisionStore)  //Set the data store for the grid
-		gridRevisions.selection.addToSelection(0) //Select our 
-		dojo.connect(gridRevisions, 'onSelected',    onGridRowSelected)
-		dojo.connect(gridRevisions, 'onRowDblClick', openViewRevision)
-		dojo.connect(buttonViewRevisionSubmit , 'onClick', openViewRevision)
+		panelCurrentExperimentInfo   = dojo.query('#viewExperimentList .panelCurrentExperimentInfo')[0]
+		gridExperiments.setStore(mac.models.Experiment)  //Set the data store for the grid
+		gridExperiments.selection.addToSelection(0)      //Select our 
+		dojo.connect(gridExperiments, 'onSelected',    onGridRowSelected)
+		dojo.connect(gridExperiments, 'onRowDblClick', openViewExperiment)
+		
 		dojo.connect(buttonNewRevisionSubmit , 'onClick', openNewRevision)
-		selectedRow = gridRevisions.selection.getFirstSelected()
-		updateRowBasedInfo()
+		selectedRow = gridExperiments.selection.getFirstSelected()
 	}
 	init()
+}
+
+//Get a list of revisions for a single round / experiment
+mac.views.ExperimentDetails = function(params){
+	var experiment = params.experiment;
+	var round = params.round;
+	tabTitle = ' round ' + round + ' ' + experiment;
+	tab = mac.controllers.main.openTab(tabTitle)
+	tab.set('content', mac.template('experimentDetails', params))
 }
 
 //Compare View to compare two revisions

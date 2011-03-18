@@ -3,7 +3,7 @@
 //////////////////////////////////////////////////////
 
 //A list of all experiments
-mac.models.ExperimentStore = new dojo.data.ItemFileWriteStore({ 
+mac.models.Experiment = new dojo.data.ItemFileWriteStore({ 
  	data : { items : []}
 });
 
