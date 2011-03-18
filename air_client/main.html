@@ -2,8 +2,10 @@
 	<head>
         <title>MAC</title>
         
+        <!-- Load our custom css for the app -->
         <link href="css/mac.css" rel="stylesheet" type="text/css"/>
-       
+        
+        <!-- Grab all of the dojo css files that we need -->
         <style type="text/css">
             @import "lib/dojo/dojo/resources/dojo.css";
             @import "lib/dojo/dijit/themes/claro/claro.css";
@@ -13,9 +15,12 @@
 			    margin: 0;
 			  }
         </style>
-       
+        
+        <!-- Load in the base air aliases -->
         <script type="text/javascript" src="lib/air/AIRAliases.js"></script>
         <script type="text/javascript" src="lib/air/AIRIntrospector.js"></script>
+        
+        <!-- Configure dojo -->
         <script type="text/javascript">
 	        var djConfig = {
 	            parseOnLoad: false,
@@ -34,53 +39,16 @@
         
         <!-- mac.dojo.js is a dojo layer built with all the dijit and dojox elements -->
         <script type="text/javascript" src="js/mac.dojo.build.js"></script>
-       
-        <script type="text/javascript">
-        	//global mac object
-			var mac = {
-				settings : {
-					lisrelCommand 		 : 'C:\\lisrel87\\lisrel87.exe',
-					gitCommand    		 : 'C:\\msysgit\\msysgit\\bin\\git.exe',
-					masterRepository     : 'git@github.com:recsm/MTMMTest.git',
-					gitBranchName        : 'tom' 
-				},
-				utilities : {
-					//Helper function to get a dom node from a certain tab using a css query
-					getTabNode : function(query, tab) {
-						return dojo.query(query, tab.containerNode)[0]
-					},
-					//Helper function to get a dojo dijit from a certain tab
-					getTabDijit : function(query, tab) {
-						return dijit.byNode(mac.utilities.getTabNode(query, tab))
-					},
-					//Shortcut to hide a node
-					nodeHide : function(node) {
-						dojo.style(node, {"visibility" : "hidden", "position" : "absolute"})
-					},
-					//Shortcut to show a node
-					nodeShow : function(node) {
-						dojo.style(node, {"visibility" : "visible", "position" : "static"})
-					}
-					
-				},
-				//Parse a template node using mustache and return the parsed contents
-				template : function(templateId, params) {
-					return Mustache.to_html(dojo.byId(templateId).innerHTML, params)
-				},
-				models : {},
-				views : {},
-				controllers : {}
-			}
-        </script>
-        
-        <!-- Add in mac object and components -->
-        <!-- Lisrel wrapper -->
+     
+        <!-- Add in mac object -->
+        <script type="text/javascript" src="js/mac..js"></script>
+        <!-- mac Lisrel wrapper -->
         <script type="text/javascript" src="js/mac.lisrel.js"></script>
-        <!-- Native Process Listener -->
+        <!-- mac Native Process Listener -->
         <script type="text/javascript" src="js/mac.BasicAirListener.js"></script>
-        <!-- Experiment Manager -->
+        <!-- mac Experiment Manager -->
         <script type="text/javascript" src="js/mac.experiments.js"></script>
-        <!-- Git version control wrapper -->
+        <!-- mac Git version control wrapper -->
         <script type="text/javascript" src="js/mac.versions.js"></script>
         <!-- mac models -->
         <script type="text/javascript" src="js/mac.models.js"></script>
@@ -214,10 +182,16 @@
    			   <button dojoType="dijit.form.Button" >Update</button>
 			</div>
 		</div>
+		
+		
+		
 		<script id="templateRevisionListTopInfo" type="template/mustache">
 	    	<h4> Round {{round }} experiment {{experiment}}</h4>
 	    	<p>Revision {{revision}} created by {{author}} on {{date}}</p>
 		</script>
+		
+		
+		
 		<script id="templateNewRevision" type="template/mustache">
 			<div class="newRevisionCompose">
 			   <div style="height:40px;padding:2px;">
@@ -235,6 +209,9 @@
 			   <div class="processLog"></div>
 			</div>
 		</script>
+		
+		
+		
 		<script id="templateCompareRevisions" type="template/mustache">
 			<div style="height:97%">
 				<div style="height:22%">
