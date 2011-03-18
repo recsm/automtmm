@@ -65,7 +65,8 @@ mac.experiments = {
 		mac.models.Branch.fetch({onComplete: function(items, request) {
 			for (var i in items) {
 				var branchName = items[i].name;
-				if (banchName == 'origin/' + mac.settings.branchName) continue;
+				//Prefer are local copy over the remote copy
+				if (branchName == 'origin/' + mac.settings.gitBranchName) continue;
 				mac.experiments.loadExperimentsFromBranch(branchName);
 			}
 		}});
