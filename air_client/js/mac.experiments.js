@@ -50,19 +50,53 @@ mac.experiments = {
 		return experiments;
 	},
 	//Get single experiment revisions from a branch experiment
-	getExperimentRevisions : function (round, experiment) {
+	loadExperimentRevisions : function (round, experiment) {
 		
+		mac.models.Branch.fetch({
+			onItem: function(item) {
+                  var branchName = mac.models.Branch.getValue( item, 'name');
+				  if (branchName != 'origin/' + mac.settings.gitBranchName) {
+				  	mac.experiments.loadRevisionsFromBranch(branchName, round, experiment);
+				  }	
+               }
+		});
+		
+		mac.experiments.loadRevisionsFromBranch(mac.settings.gitBranchName, round, experiment);
+	},
+	loadRevisionsFromBranch : function loadRevisionsFromBranch (branchName, round, experiment) {
+		var processListener = new mac.BasicAirListener('git log');
+		processListener.listeners.onOutputData = function(event){
+			var process = processListener.getProcess()
+            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
+            var revisionList = mac.versions.parseLog(data)
+			for (var i in revisionList) {
+				var item 		 = revisionList[i];
+				item.round 		 = round;
+				item.experiment  = experiment;
+				console.log(item);
+				if(!mac.models.Revision.isItem(item)) {
+					console.log(item)
+					mac.models.Revision.newItem(item);	
+				}
+			}
+		}
+		//We want revision information for the input.ls8 file
+		var fileName = 'round_' + round + '/' + experiment + '/INPUT.LS8' 
+		mac.versions.getLog(branchName, fileName, processListener);
 	},
 	//Does some parsing on a branch ls-tree to find rounds and experiments
 	loadExperimentsFromBranch : function loadExperimentsFromBranch(branchName) {
+		
 		var processListener = new mac.BasicAirListener('git ls-tree');
 		processListener.listeners.onOutputData = function(event){
 			var process = processListener.getProcess()
             var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
             parsedList = mac.versions.parseBranchFileList(data)
+			
 			var experiments = mac.experiments.reduceToExperiments(parsedList, branchName)
 			for (var i in experiments) {
 				var item = experiments[i];
+				
 				if(!mac.models.Experiment.isItem(item)) {
 					mac.models.Experiment.newItem(item);	
 				}
@@ -72,14 +106,14 @@ mac.experiments = {
 	},
 	//Get experiments on the origin server, except for our local branch origin
 	loadRemoteExperiments : function loadRemoteExperiments() {
-		mac.models.Branch.fetch({onComplete: function(items, request) {
-			for (var i in items) {
-				var branchName = items[i].name;
-				//Prefer are local copy over the remote copy
-				if (branchName == 'origin/' + mac.settings.gitBranchName) continue;
-				mac.experiments.loadExperimentsFromBranch(branchName);
-			}
-		}});
+		mac.models.Branch.fetch({
+			onItem: function(item) {
+                  var branchName = mac.models.Branch.getValue( item, 'name');
+				  if (branchName != 'origin/' + mac.settings.gitBranchName) {
+				  	mac.experiments.loadExperimentsFromBranch(branchName);
+				  }	
+               }
+		});
 	},
 	//Get's a list of remote branches
 	loadRemoteBranches : function loadBranches(onComplete) {

@@ -6,16 +6,16 @@ mac.controllers.main =  {
 	tabContainerMain : false,
 	//Open and view a single revision
 	openSingleRevision : function(params) {
-		new mac.views.singleRevision(params)
+		new mac.views.SingleRevision(params)
 	},
 	//Create a new revision
 	openNewRevision : function(params) {
-		new mac.views.newRevision(params)
+		new mac.views.NewRevision(params)
 	},
 	openCompareRevisions : function(params) {
-		new mac.views.compareRevisions(params)
+		new mac.views.CompareRevisions(params)
 	},
-	openExperimentDetails : function (params) {
+	openExperimentDetail : function (params) {
 		new mac.views.ExperimentDetails(params);
 	},
 	//Show the settings
@@ -51,9 +51,9 @@ mac.controllers.main =  {
 		dojo.connect(dijit.byId('buttonSettingsSubmit'), 'onClick', mac.controllers.main.openSettings);
 		
 		//Initialize our standard base views
-		mac.views.experimentList()
-		mac.views.compareBase()
-		mac.views.Synchronize()
+		new mac.views.ExperimentList()
+		new mac.views.CompareBase()
+		new mac.views.Synchronize()
 		
 	}
 }

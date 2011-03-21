@@ -74,9 +74,9 @@ mac.versions = {
 		mac.versions.git(['add', directoryPath  + air.File.separator + '\*'], processListener)
 	},
 	//Get a log from git
-	getLog : function getLog(processListener) {
+	getLog : function getLog(branchName, path, processListener) {
 		var format = '--pretty=format:commitHash_:_%H_,_authorName_:_%an_,_authorDate_:_%ad_,_authorTime_:_%at_,_subject_:_%s _END_LINE_'
-		mac.versions.git(['log', format], processListener)
+		mac.versions.git(['log', format, branchName, '--', path], processListener)
 	},
 	//Get a list of all files inside a branch
 	getBranchFileList : function getBranchFileList(branchName, processListener) {
