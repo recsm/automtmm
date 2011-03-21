@@ -69,16 +69,27 @@ mac.experiments = {
 			var process = processListener.getProcess()
             var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
             var revisionList = mac.versions.parseLog(data)
-			for (var i in revisionList) {
-				var item 		 = revisionList[i];
-				item.round 		 = round;
-				item.experiment  = experiment;
-				console.log(item);
-				if(!mac.models.Revision.isItem(item)) {
-					console.log(item)
-					mac.models.Revision.newItem(item);	
+			
+			mac.models.Revision.fetch({
+				onComplete: function(items, request){
+					var alreadyAdded = [];
+					for (var i in items) {
+						var item = items[i]
+						console.log(item);
+						var commitHash = mac.models.Revision.getValue(item, 'commitHash');
+						alreadyAdded.push(commitHash)
+					}
+					
+					for (var i in revisionList) {
+						var item = revisionList[i];
+						item.round = round;
+						item.experiment = experiment;
+						if (dojo.indexOf(alreadyAdded, item.commitHash) == -1) {
+							mac.models.Revision.newItem(item);
+						}
+					}
 				}
-			}
+			});
 		}
 		//We want revision information for the input.ls8 file
 		var fileName = 'round_' + round + '/' + experiment + '/INPUT.LS8' 
@@ -90,15 +101,15 @@ mac.experiments = {
 		var processListener = new mac.BasicAirListener('git ls-tree');
 		processListener.listeners.onOutputData = function(event){
 			var process = processListener.getProcess()
-            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
-            parsedList = mac.versions.parseBranchFileList(data)
-			
+			var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
+			parsedList = mac.versions.parseBranchFileList(data)
 			var experiments = mac.experiments.reduceToExperiments(parsedList, branchName)
+			
+			
 			for (var i in experiments) {
 				var item = experiments[i];
-				
-				if(!mac.models.Experiment.isItem(item)) {
-					mac.models.Experiment.newItem(item);	
+				if (!mac.models.Experiment.isItem(item)) {
+					mac.models.Experiment.newItem(item);
 				}
 			}
 		}

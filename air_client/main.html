@@ -55,7 +55,14 @@
         <!-- mac models -->
         <script type="text/javascript" src="js/mac.models.js"></script>
         <!-- mac views -->
-        <script type="text/javascript" src="js/mac.views.js"></script>
+        <script type="text/javascript" src="js/mac.views.CompareBase.js"></script>
+        <script type="text/javascript" src="js/mac.views.CompareRevisions.js"></script>
+        <script type="text/javascript" src="js/mac.views.ExperimentDetail.js"></script>
+        <script type="text/javascript" src="js/mac.views.ExperimentList.js"></script>
+        <script type="text/javascript" src="js/mac.views.NewRevision.js"></script>
+        <script type="text/javascript" src="js/mac.views.SingleRevision.js"></script>
+        <script type="text/javascript" src="js/mac.views.Synchronize.js"></script>
+        
         <!-- mac controllers -->
         <script type="text/javascript" src="js/mac.controllers.js"></script>
         
@@ -215,10 +222,11 @@
 				<table style="clear:left" class="gridExperimentRevisions" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 100%;">
 		          <thead>
 		            <tr>
-		              <th field="author" width="10%">Author</th>
-		              <th field="date" width="10%">Date</th>
-		              <th field="revision" width="10%">Revision</th>
-		              <th field="brance" width="10%">Branch</th>
+		              <th field="authorName" width="10%">Author</th>
+		              <th field="authorDate" width="10%">Date</th>
+		              <th field="experiment" width="10%">Experiment</th>
+		              <th field="round" width="10%">Round</th>
+		              <th field="subject" width="10%">Notes</th>
 		          	 </tr>
 		          </thead>
 		        </table>

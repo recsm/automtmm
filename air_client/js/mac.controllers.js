@@ -16,7 +16,7 @@ mac.controllers.main =  {
 		new mac.views.CompareRevisions(params)
 	},
 	openExperimentDetail : function (params) {
-		new mac.views.ExperimentDetails(params);
+		new mac.views.ExperimentDetail(params);
 	},
 	//Show the settings
 	openSettings : function ()
