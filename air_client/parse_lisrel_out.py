@@ -29,7 +29,7 @@ def main():
                              'group'     : group,
                              'value'     : rand })  
                
-    out_json = json.dumps(list)
+    out_json = json.dumps(list, indent=4)
     
     fileObj = open(out_file + '.JSON',"w") 
     fileObj.write(out_json)
