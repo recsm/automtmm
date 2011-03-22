@@ -22,11 +22,11 @@ mac.lisrel = {
 		//Write the model to disk
 		var cr       = air.File.lineEnding;
 		modelContent = modelContent.replace('\n', cr)
-		ls8AirFile = mac.experiments.getExperimentFile(round, experiment, 'INPUT.LS8')
+		var ls8AirFile = mac.experiments.getExperimentFile(round, experiment, 'INPUT.LS8')
 		var fs = new air.FileStream();
 		fs.open(ls8AirFile, air.FileMode.WRITE);
 		fs.writeUTFBytes(modelContent);
 		fs.close();
-		return ls8AirFile 
+		return ls8AirFile; 
 	}
 }

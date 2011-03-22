@@ -24,5 +24,5 @@ mac.views.Synchronize = function() {
 		dojo.connect(cloneButton, 'onClick', onCloneButtonClick)
 		dojo.connect(syncButton, 'onClick', onSyncButtonClick)
 	}
-	init()
+	init();
 }

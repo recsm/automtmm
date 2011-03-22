@@ -1,7 +1,8 @@
 ///Helper for Air Native Process Listener
 mac.BasicAirListener = function BasicAirListener(processName, onInit) {
 
-    var listener = this;
+    var listener;
+
 	
     var log = function log(message) {
         	console.log(processName + ': ' + message)
@@ -11,14 +12,14 @@ mac.BasicAirListener = function BasicAirListener(processName, onInit) {
 	var listeners = {}	
 	
 	listeners.onOutputData = function (event) {
-	    	        var proocess = listener.getProcess();
-		            log("DATA: " + proocess.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable)); 
+	    	        var process = listener.getProcess();
+		            log("DATA: " + process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable)); 
 		       		//data =  process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable); 
 		        }
 				
 	listeners.onErrorData =  function onErrorData(event) {
-	  				var proocess = listener.getProcess();
-		            log("ERROR: " + proocess.standardError.readUTFBytes(process.standardError.bytesAvailable)); 
+	  				var process = listener.getProcess();
+		            log("ERROR: " + process.standardError.readUTFBytes(process.standardError.bytesAvailable)); 
 		       		 //error = process.standardError.readUTFBytes(process.standardError.bytesAvailable); 
 		        }
 				
@@ -28,11 +29,11 @@ mac.BasicAirListener = function BasicAirListener(processName, onInit) {
 	        	}
 				
 	listeners.onIOError =  function onIOError(event) {
-	            	log('IOERROR: ' + event.toString());
+	            	log('IOERROR: ' + event.type + ' ' + event.toString());
 	            	//error = event.toString();
 	 }
 	    	
-	return  {
+	listener = {
 	    log          : log,
 	    listeners    : listeners,
 		processName  : processName,
@@ -40,12 +41,15 @@ mac.BasicAirListener = function BasicAirListener(processName, onInit) {
 			return listener.process;
 		},
   		init 		 : function init(process) {
-  			listener.process = process;
+			listener.process = process;
         	process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, listeners.onOutputData);
             process.addEventListener(air.ProgressEvent.STANDARD_ERROR_DATA, listeners.onErrorData);
             process.addEventListener(air.NativeProcessExitEvent.EXIT, listeners.onExit);
+			process.addEventListener(air.IOErrorEvent.STANDARD_INPUT_IO_ERROR, listeners.onIOError);
             process.addEventListener(air.IOErrorEvent.STANDARD_OUTPUT_IO_ERROR, listeners.onIOError);
             process.addEventListener(air.IOErrorEvent.STANDARD_ERROR_IO_ERROR, listeners.onIOError);
         }
   	}
+	
+	return listener;
 }

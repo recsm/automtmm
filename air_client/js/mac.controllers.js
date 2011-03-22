@@ -21,8 +21,8 @@ mac.controllers.main =  {
 	//Show the settings
 	openSettings : function ()
 	{
-	    dialog = dijit.byId('dialogSettings')
-		dialog.show()
+	    dialog = dijit.byId('dialogSettings');
+		dialog.show();
 	},
 	//Helper function to open a tab
 	openTab : function (tabTitle) {
@@ -32,12 +32,16 @@ mac.controllers.main =  {
 		return tab
 	},
 	
+	onSettingsChanged : function() {
+		mac.controllers.main.updateSettingsBasedContent()
+	},
+	updateSettingsBasedContent : function () {
+		dojo.byId('headerUser').innerHTML = mac.settings.userName;
+	},
 	init : function(parentObject) {
 		
 		
-		//Adjust settings
-		mac.settings.localRepository = air.File.documentsDirectory.resolvePath('MacMTMM/repository').nativePath
-		
+
 		//Start up pageant to keep our ppk key in memory for putty
 		mac.versions.init();
 		
@@ -51,9 +55,10 @@ mac.controllers.main =  {
 		dojo.connect(dijit.byId('buttonSettingsSubmit'), 'onClick', mac.controllers.main.openSettings);
 		
 		//Initialize our standard base views
-		new mac.views.ExperimentList()
-		new mac.views.CompareBase()
-		new mac.views.Synchronize()
+		new mac.views.ExperimentList();
+		new mac.views.CompareBase();
+		new mac.views.Synchronize();
+		new mac.views.Settings();
 		
 	}
 }

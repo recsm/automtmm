@@ -18,15 +18,16 @@ mac.versions = {
 		//Call the init method of the listener that we were passed
 		var process = new air.NativeProcess();
 		processListener.init(process);
-		process.start(nativeProcessStartupInfo);   
 		processListener.log('Calling:: git ' + args.join(' '));
+		process.start(nativeProcessStartupInfo);   
+		
     },
     //Do the initial checkout of the repository
     cloneRepository : function cloneRepository(processListener) {
     	 //Clone the initial repository
     	 mac.versions.git(['clone', 
     	     mac.settings.masterRepository,
-    	     mac.settings.localRepository],
+    	     air.File.documentsDirectory.resolvePath('MacMTMM/repository').nativePath],
     	     processListener);
     },
     branchRepository : function branchRepository(branchName) {
@@ -34,6 +35,21 @@ mac.versions = {
     	var processListener = new mac.BasicAirListener('git branch');
     	mac.versions.git(['branch', branchName], processListener);
     },
+	//When the settings object for mac has been changed then we do an update
+	onSettingsChanged : function onSettingsChanged() {
+		var processListener = new mac.BasicAirListener('git checkout')
+		mac.versions.checkOutBranch(mac.settings.gitBranchName, processListener);
+		var configProcessListener = new mac.BasicAirListener('git config');
+		configProcessListener.listeners.onExit = function(event) {
+			configProcessListener.log("EXIT: Process exited with code " + event.exitCode);
+	        mac.versions.setConfig('user.email', mac.settings.userEmail, new mac.BasicAirListener('git config'));
+		}
+		mac.versions.setConfig('user.name', mac.settings.userName, configProcessListener);
+		
+	},
+	setConfig : function setConfig(property, value, processListener) {
+		mac.versions.git(['config', property, value], processListener);
+	},
     //Get a list of all local branches
     getRemoteBranchList : function getBranchList(processListener) {
     	//call git branch with no args 

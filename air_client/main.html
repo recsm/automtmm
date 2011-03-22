@@ -42,6 +42,8 @@
      
         <!-- Add in mac object -->
         <script type="text/javascript" src="js/mac.js"></script>
+        <!-- mac settings -->
+        <script type="text/javascript" src="js/mac.settings.js"></script>
         <!-- mac utilities -->
         <script type="text/javascript" src="js/mac.utilities.js"></script>
         <!-- mac Lisrel wrapper -->
@@ -60,6 +62,7 @@
         <script type="text/javascript" src="js/mac.views.ExperimentDetail.js"></script>
         <script type="text/javascript" src="js/mac.views.ExperimentList.js"></script>
         <script type="text/javascript" src="js/mac.views.NewRevision.js"></script>
+        <script type="text/javascript" src="js/mac.views.Settings.js"></script>
         <script type="text/javascript" src="js/mac.views.SingleRevision.js"></script>
         <script type="text/javascript" src="js/mac.views.Synchronize.js"></script>
         
@@ -89,6 +92,9 @@
 				//Parse dojo widgets out of the applicationBase div
 				dojo.parser.parse(dojo.byId('application'));
 				
+				//Get our settings
+				mac.settingsManager.init();
+				
 				//Call our main controller to init the application
 				mac.controllers.main.init()
 			});
@@ -102,7 +108,7 @@
 	    			<div id="headerSettings">			           			
 	    				<button id="buttonSettingsSubmit" dojoType="dijit.form.Button" iconClass="dijitIconConfigure">Settings</button>
 					</div>
-	    			<div id="headerUser">Willem Saris</div>
+	    			<div id="headerUser"></div>
 	    			<div id="headerTitle">MAC</div>
 	    			<div id="headerCaption">MTMM Archiving and Comparison program</div>
 	    		</div>
@@ -177,13 +183,7 @@
 				 </div>  
 			</div> 
 			<div id="dialogSettings" dojoType="dijit.Dialog" title="MAC Settings" >
-		        <label> Some Setting</label>
-   			   <select dojoType="dijit.form.Select">
-   			   		<option value="beep"> Option 1 </option>
-   			   		<option value="beep"> Option 2</option>
-   			   		<option value="beep"> Option 3 </option>
-   			   </select>
-   			   <button dojoType="dijit.form.Button" >Update</button>
+   			   <!-- content dynamically created by mac.views.Settings -->
 			</div>
 		</div>
 		

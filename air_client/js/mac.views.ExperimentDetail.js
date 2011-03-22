@@ -9,8 +9,9 @@ mac.views.ExperimentDetail = function(params){
  		data : { items : []}
 	});
 	
+	//Whenever an item is added to the parent revison model, we check
+	//and display it if it matches our criteria
 	var checkAndAddItem = function (item) {
-		console.log('beep');
 		console.log(item)
 		var itemExperiment = mac.models.Revision.getValue(item, 'experiment');
 		var itemRound = mac.models.Revision.getValue(item, 'round');
