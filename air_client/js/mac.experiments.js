@@ -25,28 +25,27 @@ mac.experiments = {
 	//Take a parsed list from mac.versions.parseBranchFileList and get all experiments and rounds
 	reduceToExperiments : function reduceToExperiments(list, branchName) {
 		var experiments = [];
+		
 		for (var i in list) {
 			var item = list[i];
 			if(item.objectName.indexOf('round_') == -1) continue;
 			var parts = item.objectName.split('/');
 			var round = 1 * parts[0].substr(parts[0].lastIndexOf('_') +1);
 			var name  = parts[1];				
-			var found = false;
-			for (var j in experiments) {
-				var experiment = experiments[j];
-				if (experiment.round == round && experiment.name == name) {
-					found = true;
-					break;
-				}
-			}
-			if(!found) {
-				experiments.push({
-					name   : name,
-					round  : round,
-					branch : branchName
-				})
-			}
+			
+			
+			//Some useful things for creating the drop down select
+			var roundAndExperiment = 'Round ' + round + ' ' + name;
+			var identifier = round + ':' + name;
+			experiments.push({
+				identifier 			: identifier,
+				roundAndExperiment 	: roundAndExperiment,
+				name   				: name,  //name as in experiement name
+				round  				: round,
+				branches 			: branchName
+			})
 		}
+		
 		return experiments;
 	},
 	//Get single experiment revisions from a branch experiment
@@ -70,30 +69,81 @@ mac.experiments = {
             var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
             var revisionList = mac.versions.parseLog(data)
 			
-			mac.models.Revision.fetch({
-				onComplete: function(items, request){
-					var alreadyAdded = [];
-					for (var i in items) {
-						var item = items[i]
-						console.log(item);
-						var commitHash = mac.models.Revision.getValue(item, 'commitHash');
-						alreadyAdded.push(commitHash)
-					}
-					
-					for (var i in revisionList) {
-						var item = revisionList[i];
-						item.round = round;
-						item.experiment = experiment;
-						if (dojo.indexOf(alreadyAdded, item.commitHash) == -1) {
-							mac.models.Revision.newItem(item);
-						}
-					}
-				}
-			});
+			for (var i in revisionList) {
+				var newItem = revisionList[i];
+				newItem.round = round;
+				newItem.experiment = experiment;
+				newItem.label = newItem.authorName + ' - ' + newItem.authorDate; 
+				
+				//Some duplicate commit hashes may throw an exception, so we
+				//try to add everything and ignore the expections
+				//This is much easier and faster than other techniques
+				try {
+					mac.models.Revision.newItem(newItem);
+				} catch(e) {}
+			}
 		}
 		//We want revision information for the input.ls8 file
 		var fileName = 'round_' + round + '/' + experiment + '/INPUT.LS8' 
 		mac.versions.getLog(branchName, fileName, processListener);
+	},
+	//Create a unique revision store by experiment and round
+	getSelectedRevisionStore : function getSelectedRevisionStore(round, experiment){
+		
+		//Check if we already created this store, if so return it
+		for (var i in mac.models.selectedRevisions) {
+			var r = mac.models.selectedRevisions[i];
+			if ((r.round == round) && (r.experiment == experiment)) {
+				return r.store;
+			}
+		}
+		
+		mac.experiments.loadExperimentRevisions(round, experiment);
+			
+		//Create a linked child store to contain matching experiments and rounds
+		var store =  new dojo.data.ItemFileWriteStore({ 
+			 data : { 
+				identifier: "commitHash",
+				label: "label",
+				items : []}
+		});
+		
+		//Whenever an item is added to the parent revison model, we check
+		//and display it if it matches our criteria
+		var checkAndAddItem = function (item) {
+			var itemExperiment = mac.models.Revision.getValue(item, 'experiment');
+			var itemRound = mac.models.Revision.getValue(item, 'round');
+			if((itemExperiment == experiment) && ((1 * itemRound) == (1 * round))) {
+				var itemAsJson = {
+					label : mac.models.Revision.getValue(item, 'label'), 
+					experiment  : mac.models.Revision.getValue(item, 'experiment'),
+					round : mac.models.Revision.getValue(item, 'round'),
+					authorName : mac.models.Revision.getValue(item, 'authorName'),
+					authorDate : mac.models.Revision.getValue(item, 'authorDate'),
+					subject : mac.models.Revision.getValue(item, 'subject'),
+					commitHash : mac.models.Revision.getValue(item, 'commitHash')
+				}
+				store.newItem(itemAsJson);
+			}
+		}
+		
+		//Load in existing records for matching experiments and rounds
+		mac.models.Revision.fetch({onItem : function (item) {
+			checkAndAddItem(item);
+		}});
+		
+		dojo.connect(mac.models.Revision, 'onNew', checkAndAddItem);
+		
+		var createdStore = {
+			store : store,
+			round : round,
+			experiment : experiment
+		}
+		
+		//Keep a copy so that we only create each store once
+		mac.models.selectedRevisions.push(createdStore);
+		
+		return store;
 	},
 	//Does some parsing on a branch ls-tree to find rounds and experiments
 	loadExperimentsFromBranch : function loadExperimentsFromBranch(branchName) {
@@ -105,13 +155,28 @@ mac.experiments = {
 			parsedList = mac.versions.parseBranchFileList(data)
 			var experiments = mac.experiments.reduceToExperiments(parsedList, branchName)
 			
-			
+			//Try to add in everything, some existing items will be skipped
+			//Dojo uses the identifier to make sure items are unique
 			for (var i in experiments) {
 				var item = experiments[i];
-				if (!mac.models.Experiment.isItem(item)) {
+				try {
 					mac.models.Experiment.newItem(item);
-				}
+				} catch (e) {}
 			}
+			//Here we add in all of the branches that an experiment exists in
+			mac.models.Experiment.fetch({
+				onItem: function(item) {
+	                  var identifier = mac.models.Experiment.getValue( item, 'identifier');
+					  for (var i in experiments) {
+						  	if(experiments[i].identifier == identifier) {
+						  	var branches = mac.models.Experiment.getValue(item, 'branches');
+						  	if (branches.indexOf(experiments[i].branches) == -1){
+								mac.models.Experiment.setValue(item, 'branches', branches + ', ' + experiments[i].branches);
+							}
+						  } 
+					  }				  
+	               }
+			});
 		}
 		mac.versions.getBranchFileList(branchName, processListener);
 	},

@@ -27,26 +27,32 @@ mac.views.NewRevision = function(params) {
 			//If we find E_R_R_O_R then we alert the user and show the output
 			var OUT = mac.experiments.getExperimentFileContents(round, experiment, 'OUT')
 			if (OUT.indexOf('E_R_R_O_R') == -1) {
+				logProgress('Lisrel ran with success.<br>');
 				//Success
-				//If the output is ok, then we process it in python to extract the dataset we need						
-				logProgress('Input ran with success committing changes<br>');
-				var processListener = new mac.BasicAirListener('git add')
-				processListener.onExit = function (event) {
-					if(event.exitCode == 0) {
-					    var commitListener = new mac.BasicAirListener('git commit')
-						mac.versions.commit('Testing..... replace this message with some notes?', commitListener)
-					}
-				}
-				var directory = mac.experiments.getExperimentDirectory(round, experiment)
-				mac.versions.addDirectory(directory, processListener)
+				//If the output is ok, then we process it in python to extract the dataset we need	
+				parseToMatrix();
 			}
 			else {
 				logProgress('Lisrel reported an error in the input.')
 			}
 		}
 		else {
-			logProgress('There was an error running lisrel exit code (' + exitCode +')<br>');
+			logProgress('There was an error running lisrel, lisrel exited with code (' + exitCode +')<br>');
 		}
+	}
+	
+	var addAndCommit = function addAndCommit() {
+		var processListener = new mac.BasicAirListener('git add')
+		processListener.listeners.onExit = function (event) {
+			if(event.exitCode == 0) {
+			    var commitListener = new mac.BasicAirListener('git commit')
+				mac.versions.commit('Testing..... replace this message with some notes?', commitListener)
+				logProgress("Commit Finished");
+			}
+		}
+		var directory = mac.experiments.getExperimentDirectory(round, experiment);
+		mac.versions.addDirectory(directory, processListener);
+		logProgress("Committing new revision.<br>");
 	}
 	
 	var processModel = function processModel() {
@@ -59,13 +65,24 @@ mac.views.NewRevision = function(params) {
 		logProgress("Input saved as " + ls8AirFile.nativePath + '<br>');
 		
 		var processListener = new mac.BasicAirListener('lisrel')
-		processListener.setListener('onExit', function(event) 
+		processListener.listeners.onExit = function(event) 
 		{ 
 		    setLisrelResult(event.exitCode)
-		});
+		}
 		
         mac.lisrel.runModel(ls8AirFile.nativePath, processListener)
         logProgress("Running input in lisrel <br>")
+	}
+	
+	
+	var parseToMatrix = function parseToMatrix() {
+		var processListener = new mac.BasicAirListener('parse_lisrel_out.py')
+		processListener.listeners.onExit = function(event){
+			logProgress("Lisrel output parsed correctly");
+			addAndCommit();
+		}
+		logProgress('Breaking lisrel output down into matrix.<br>');
+        mac.lisrel.parseToMatrix(ls8AirFile.nativePath.replace('INPUT.LS8', 'OUT'), processListener)
 	}
 	
 	mac.utilities.nodeHide(nodeNewRevisionReview)

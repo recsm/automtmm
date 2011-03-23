@@ -3,6 +3,7 @@ mac.settings = {
 		//saved to MACMTMM/settings.json
 	   	lisrelCommand        : 'C:\\lisrel87\\lisrel87.exe',
 	    gitCommand           : 'C:\\msysgit\\msysgit\\bin\\git.exe',
+		pythonCommand        : 'C:\\Python26\python.exe',
 	    masterRepository     : 'git@github.com:recsm/MTMMTest.git',
 	    gitBranchName        : 'default',
 		userName             : 'Default User',
@@ -18,7 +19,6 @@ mac.settingsManager = {
 		fs.open(settingsFile, air.FileMode.WRITE);
 		fs.writeUTFBytes(settingsJson);
 		fs.close();
-		
 		//These should really be proper event listeners, but this will work for the moment
 		mac.controllers.main.onSettingsChanged();
 		mac.versions.onSettingsChanged();
@@ -30,7 +30,11 @@ mac.settingsManager = {
 		fs.open(settingsFile, air.FileMode.READ);
 		var settingsJson = fs.readUTFBytes(fs.bytesAvailable);
 		fs.close();
-		mac.settings = dojo.fromJson(settingsJson);
+		var settings = dojo.fromJson(settingsJson);
+		
+		for (var prop in settings) {
+			mac.settings[prop] = settings[prop];
+		}
 	},
 	init : function init() {
 		//Check if our settings file exists yet

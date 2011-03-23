@@ -18,6 +18,21 @@ mac.lisrel = {
 		process.start(nativeProcessStartupInfo); 
 	},
 	
+	parseToMatrix : function parseToMatrix (outFileNativePath,processListener) {
+		var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
+		var pythonExecutable = new air.File();
+		pythonExecutable.nativePath = mac.settings.pythonCommand;
+		nativeProcessStartupInfo.executable = pythonExecutable; 
+		var pythonScript = air.File.applicationDirectory.resolvePath('parse_lisrel_out.py').nativePath;
+		var processArgs = new air.Vector["<String>"]();
+		processArgs.push(pythonScript); 
+		processArgs.push(outFileNativePath); 
+		nativeProcessStartupInfo.arguments = processArgs; 
+		var process = new air.NativeProcess(); 
+		processListener.init(process)
+		process.start(nativeProcessStartupInfo); 
+	},
+	
 	saveModelToFile : function saveModelToFile(round, experiment, modelContent) {
 		//Write the model to disk
 		var cr       = air.File.lineEnding;
