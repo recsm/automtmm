@@ -48,6 +48,9 @@ mac.views.NewRevision = function(params) {
 			    var commitListener = new mac.BasicAirListener('git commit')
 				mac.versions.commit('Testing..... replace this message with some notes?', commitListener)
 				logProgress("Commit Finished");
+				//Refresh our store
+				mac.experiments.getSelectedRevisionStore(round, experiment,  true);
+
 			}
 		}
 		var directory = mac.experiments.getExperimentDirectory(round, experiment);

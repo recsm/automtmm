@@ -1,111 +1,69 @@
 	
 mac.views.CompareRevisions = function (params) {
 	
-	var tabTitle = 'experiment_2 (' + params.fromRevision + ' vs ' + params.toRevision + ')'
-	var tab = mac.controllers.main.openTab(tabTitle)
-	tab.set('content', mac.template('templateCompareRevisions', params))
+	//Simple objects about the revisions
+	var fromRevison, 
+	    toRevision, 
+		experiment, 
+		round, 
+		fromParams, 
+		toParams, 
+		allItems, 
+		updateGridStoreLastValue,
+		tab,
+		compareSourceDiff, 
+		gridDiff, 
+		selectFilterCountry, 
+		selectFilterGroup, 
+		selectFilterParameter, 
+		spinnerMinDifference;
 	
-	var gridDiff 			  = mac.utilities.getTabDijit(".gridDiff", tab)
-	var selectFilterCountry   = mac.utilities.getTabDijit(".selectFilterCountry", tab)
-	var selectFilterGroup     = mac.utilities.getTabDijit(".selectFilterGroup", tab)
-	var selectFilterParamater = mac.utilities.getTabDijit(".selectFilterParamater", tab)
-	var spinnerMinDifference  = mac.utilities.getTabDijit(".spinnerMinDifference", tab)
-	
-	
-	 //This is a helper function to create unique lists with individual stores
-	var setFromUniqueStore = function(fromStore, uniqueProperty, toFilteredSelect) {
-       //Fetch the data from the orig store.
-        fromStore.fetch({
-            onComplete: function (items, request) {
-            	var uniqueItems  = []
-            	//Add an empty value as the first item
-            	var allItem = {}
-            	allItem[uniqueProperty] = ''
-            	uniqueItems.push(allItem)
-            	var values = []
-            	var items  = items
-        	    for (var i = 0; i < items.length; i++) {
-                    var item = items[i];
-                    var value = fromStore.getValue(item, uniqueProperty)
-                    if (values.indexOf(value) == -1) {
-                    	values.push(value)
-                    	var newItem = {}
-                    	newItem[uniqueProperty] = value
-                    	uniqueItems.push(newItem)
-                    } 
-                 }
-                 var uniqueStore = new dojo.data.ItemFileWriteStore({data:{items:uniqueItems}});
-                 toFilteredSelect.set('store', uniqueStore)
-            }  ,
-            //Callback for if the lookup fails.
-            onError:  function fetchFailed(error, request) {
-	                console.log("getUniqueList lookup failed");
-	            }
-        });
+	//This is a helper function to create unique lists with individual stores from allItems
+	var setFromUniqueStore = function(uniqueProperty, toFilteredSelect) {
+        //Keep a list of unique items     
+    	var uniqueItems  = [];
+		//Add an empty value as the first item
+		var item = {}
+		item[uniqueProperty] = '';
+    	uniqueItems.push(item);
+		//Keep track of what values we have already added in
+    	var values = [];
+	    for (var i = 0; i < allItems.length; i++) {
+            var item = allItems[i];
+            var value = item[uniqueProperty];
+            if (values.indexOf(value) == -1) {
+            	values.push(value);
+				var newItem = {}
+				newItem[uniqueProperty] = value;
+            	uniqueItems.push(newItem);
+            } 
+         }
+         var uniqueStore = new dojo.data.ItemFileWriteStore({data:{items:uniqueItems}});
+         toFilteredSelect.set('store', uniqueStore);
 	}
 	
-	var allItems =  [
-	    { country: 'Ireland', group:'group_1', paramater: 'sd1', RevisionFrom : 0.20, RevisionTo: 0.98},
-		{ country: 'France',  group:'group_1', paramater: 'sd2', RevisionFrom : 0.10, RevisionTo: 0.76},
-		{ country: 'France',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.30, RevisionTo: 0.34},
-		{ country: 'England',  group:'group_12', paramater: 'sd3', RevisionFrom : 0.10, RevisionTo: 0.45},
-		{ country: 'England',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.87},
-		{ country: 'England',  group:'group_2', paramater: 'sd2', RevisionFrom : 0.10, RevisionTo: 0.28},
-		{ country: 'England',  group:'group_2', paramater: 'sd3', RevisionFrom : 0.60, RevisionTo: 0.56},
-		{ country: 'England',  group:'group_1', paramater: 'sd4', RevisionFrom : 0.18, RevisionTo: 0.29},
-		{ country: 'France',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.14, RevisionTo: 0.28},
-		{ country: 'France',  group:'group_1', paramater: 'sd2', RevisionFrom : 0.12, RevisionTo: 0.42},
-		{ country: 'Never Never Land',  group:'group_1', paramater: 'sd3', RevisionFrom : 0.90, RevisionTo: 0.13},
-		{ country: 'Never Never Land',  group:'group_2', paramater: 'sd4', RevisionFrom : 0.80, RevisionTo: 0.33},
-		{ country: 'Never Never Land',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.70, RevisionTo: 0.23},
-		{ country: 'Never Never Land',  group:'group_2', paramater: 'sd5', RevisionFrom : 0.10, RevisionTo: 0.43},
-		{ country: 'Never Never Land',  group:'group_1', paramater: 'sd3', RevisionFrom : 0.50, RevisionTo: 0.23},
-		{ country: 'Never Never Land',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.40, RevisionTo: 0.63},
-		{ country: 'France',  group:'group_3', paramater: 'sd2', RevisionFrom : 0.20, RevisionTo: 0.43},
-		{ country: 'France',  group:'group_1', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.23},
-		{ country: 'Somalia',  group:'group_2', paramater: 'sd3', RevisionFrom : 0.30, RevisionTo: 0.63},
-		{ country: 'Somalia',  group:'group_2', paramater: 'sd1', RevisionFrom : 0.10, RevisionTo: 0.23},
-		{ country: 'Somalia',  group:'group_3', paramater: 'sd2', RevisionFrom : 0.40, RevisionTo: 0.53},
-		{ country: 'Germany', group:'group_2', paramater: 'sd4', RevisionFrom : 0.13, RevisionTo: 0.15}
-	]
-	
-	//Calculate the difference between each item
-	for (i in allItems) {
-	    var difference = Math.abs(allItems[i]['RevisionFrom'] - allItems[i]['RevisionTo'])
-	    difference = Math.ceil(difference * 100) / 100
-		allItems[i]['difference'] = difference
-	}
-	
-	var storeAll = new dojo.data.ItemFileWriteStore({ 
-     data : { items: allItems}
-	});
-	
-	//Assign the datastores to the different widgets
-	setFromUniqueStore(storeAll, 'country',   		selectFilterCountry)
-	setFromUniqueStore(storeAll, 'group',     		selectFilterGroup)
-	setFromUniqueStore(storeAll, 'paramater', 		selectFilterParamater)
 	
 	var updateFilter = function () {
-		filterParams = {}
-		country    = selectFilterCountry.get('displayedValue')
-		group      = selectFilterGroup.get('displayedValue')
-		paramater  = selectFilterParamater.get('displayedValue')	
-		if (country != '')   filterParams['country'] 	 = country
-		if (group != '') 	 filterParams['group'] 		 = group
-		if (paramater != '') filterParams['paramater']   = paramater
-		gridDiff.filter(filterParams)
+		var filterParams = {};
+		var country    = selectFilterCountry.get('displayedValue');
+		var group      = selectFilterGroup.get('displayedValue');
+		var parameter  = selectFilterParameter.get('displayedValue');	
+		if (country != '')   filterParams['country'] 	 = country;
+		if (group != '') 	 filterParams['group'] 		 = group;
+		if (parameter != '') filterParams['parameter']   = parameter;
+		gridDiff.filter(filterParams);
 	}
 	
 	//It would be nice to avoid this function, but I don't know how to filter a grid by greater than
 	//Must be possible but hard to find an example so here we always create a new item store
-	var updateGridStoreLastValue = null
-	var updateGridStore = function() {
+	
+	var updateGridStore = function () {
 		//Make a sub selection of items to add to the grid, having a difference greater than a certain value 
 		var inRangeItems = []
 		var minValue  = spinnerMinDifference.get('value')
 		if (minValue == updateGridStoreLastValue) return true; //pass if no change
 		for (var i in allItems) {
-			item = allItems[i]
+			var item = allItems[i]
 			if (item.difference > minValue){
 				inRangeItems.push(item)
 			}
@@ -113,16 +71,123 @@ mac.views.CompareRevisions = function (params) {
 		var storeInRange = new dojo.data.ItemFileWriteStore({ 
          	data : { items: inRangeItems}
 		});
-		gridDiff.setStore(storeInRange)
-		updateFilter()
-		udpateGridStoreLastValue = minValue
+		gridDiff.setStore(storeInRange);
+		updateFilter();
+		udpateGridStoreLastValue = minValue;
 	}
 	
-	updateGridStore()
-	dojo.connect(spinnerMinDifference,  'onClick',   updateGridStore)
-	dojo.connect(spinnerMinDifference,  'onChange',  updateGridStore)
-	dojo.connect(spinnerMinDifference,  'onKeyDown', updateGridStore)
-	dojo.connect(selectFilterCountry,   'onChange',  updateFilter)
-	dojo.connect(selectFilterGroup, 	'onChange',  updateFilter)
-	dojo.connect(selectFilterParamater, 'onChange',  updateFilter)
+	var initGrid = function initGrid() {
+		//Calculate the difference between each item
+		for (i in allItems) {
+		    var difference = Math.abs(allItems[i]['RevisionFrom'] - allItems[i]['RevisionTo'])
+		    difference = Math.ceil(difference * 1000) / 1000
+			allItems[i]['difference'] = difference;
+		}
+		updateGridStore();
+	}
+	
+	//Init all of the grid filters
+	var initFilters = function() {
+		dojo.connect(spinnerMinDifference,  'onClick',   updateGridStore);
+		dojo.connect(spinnerMinDifference,  'onChange',  updateGridStore);
+		dojo.connect(spinnerMinDifference,  'onKeyDown', updateGridStore);
+		dojo.connect(selectFilterCountry,   'onChange',  updateFilter);
+		dojo.connect(selectFilterGroup, 	'onChange',  updateFilter);
+		dojo.connect(selectFilterParameter, 'onChange',  updateFilter);
+		
+		//Assign the datastores to the different widgets
+		setFromUniqueStore('country',  selectFilterCountry);
+		setFromUniqueStore('group', selectFilterGroup);
+		setFromUniqueStore('parameter', selectFilterParameter);
+	}
+	
+	
+	var setUpParamStore = function () {
+		allItems = [];
+		
+		for (var i in fromParams) {
+			allItems.push ({
+				country 	 : fromParams[i].country,
+				group 	  	 : fromParams[i].group,
+				parameter 	 : fromParams[i].parameter,
+				RevisionFrom : Math.round(fromParams[i].value * 1000) / 1000,
+				RevisionTo    : 10 //Just to notice quickly if a value is missing
+			});
+		}
+		
+		var found;
+		for (var i in toParams) {
+			found = false;
+			for (var j in allItems) {
+				if ((allItems[j].country   == toParams[i].country) &&
+					(allItems[j].group     == toParams[i].group) &&
+					(allItems[j].parameter == toParams[i].parameter) 
+				) {
+					allItems[j].RevisionTo = Math.round(toParams[i].value * 1000) / 1000;
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				allItems.push ({
+				country 	 : toParams[i].country,
+				group 	  	 : toParams[i].group,
+				parameter 	 : toParams[i].parameter,
+				RevisionFrom : 10,
+				RevisionTo    : Math.round(toParams[i].value * 1000) //Just to notice quickly if a value is missing
+			});
+			}
+		}
+		
+		initFilters();
+		initGrid();
+		
+	}
+	
+	//Get the param files for to and from
+	var getParameterFiles = function() {
+		mac.experiments.getExperimentFileRevision(round, experiment, 'OUT.JSON', fromRevision.commitHash, function (data) {
+			fromParams = dojo.fromJson(data);
+			mac.experiments.getExperimentFileRevision(round, experiment, 'OUT.JSON', toRevision.commitHash, function (data) {
+				toParams = dojo.fromJson(data);
+				setUpParamStore();
+			});
+		});
+	}
+	
+	
+	
+	var loadFileDiff = function () {
+		mac.experiments.getExperimentFileDiff(round, experiment, 'INPUT.LS8', fromRevision.commitHash, toRevision.commitHash, function(data){
+			compareSourceDiff.innerHTML =  mac.versions.diffToHtml(data);
+		});
+	}
+	
+	var setUpView = function() {
+		var tabTitle = 'Round ' + round + ' ' + experiment + ' (compare)';
+		tab = mac.controllers.main.openTab(tabTitle)
+		tab.set('content', mac.template('templateCompareRevisions', params))
+		gridDiff 			  = mac.utilities.getTabDijit(".gridDiff", tab)
+		selectFilterCountry   = mac.utilities.getTabDijit(".selectFilterCountry", tab)
+		selectFilterGroup     = mac.utilities.getTabDijit(".selectFilterGroup", tab)
+		selectFilterParameter = mac.utilities.getTabDijit(".selectFilterParameter", tab)
+		spinnerMinDifference  = mac.utilities.getTabDijit(".spinnerMinDifference", tab);
+		compareSourceDiff     = mac.utilities.getTabNode(".compareSourceDiff ", tab);
+		loadFileDiff();
+	}
+	
+	var init = function() {
+		//Get the actual records from the commit hashes
+		mac.models.Revision.fetchItemByIdentity({identity: params.fromRevision, onItem: function (item) {
+			fromRevision = mac.models.Revision.itemToObject(item);
+			mac.models.Revision.fetchItemByIdentity({identity: params.toRevision, onItem: function (item) {
+				toRevision = mac.models.Revision.itemToObject(item);
+				experiment = toRevision.experiment;
+				round      = toRevision.round;
+				setUpView();
+				getParameterFiles();
+			}});
+		}});
+	}
+	init();
 }

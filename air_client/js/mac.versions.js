@@ -47,6 +47,49 @@ mac.versions = {
 		mac.versions.setConfig('user.name', mac.settings.userName, configProcessListener);
 		
 	},
+	//call git show to get a revision of a file at a specific commit
+	showFileRevision : function showFileRevision(filePath, commitHash, processListener) {
+		mac.versions.git(['show', commitHash + ':' + filePath], processListener);
+	},
+	//Get a diff of the same file between two versions
+	showFileDiff : function showFileDiff(filePath, fromCommitHash, toCommitHash, processListener) {
+		mac.versions.git(['diff', fromCommitHash, toCommitHash, '--', filePath], processListener);
+	},
+	//make a html markup of a diff file
+	diffToHtml : function diffToHtml(diff){
+		var lines 		= diff.split("\n");
+		var diffBlocks  = []
+		var blockIndex  = -1;
+		
+		var firstAtReached = false;
+		for (var i in lines) {
+			var line = lines[i];
+			//The first char is the marker in the diff output
+			var firstChar = line.substr(0,1);
+			if(!firstAtReached && firstChar != '@') continue;  //Skip the first few lines
+			if (firstChar == '@') {
+				firstAtReached = true;
+				blockIndex ++;
+				diffBlocks[blockIndex] = '';
+			}
+			
+			var restOfLine = line.substr(1);
+			// ' ' output as a normal line
+			if(firstChar == ' ') {
+				diffBlocks[blockIndex] += '<div>' + restOfLine + '</div>';
+			} else if(firstChar == '-') {
+				diffBlocks[blockIndex] += '<div class="diffLineRemoved">' + restOfLine + '</div>';
+		    } else if(firstChar == '+') {
+				diffBlocks[blockIndex] += '<div class="diffLineAdded">' + restOfLine + '</div>';
+			} else {
+				diffBlocks[blockIndex] += '<div class="diffOtherLine">' + line + '</div>';
+			}
+		}
+		
+		var html = '<div class="diffBlock">' + diffBlocks.join('</div><div class="diffBlock">') + '</div>';
+		
+		return html;
+	},
 	setConfig : function setConfig(property, value, processListener) {
 		mac.versions.git(['config', property, value], processListener);
 	},
@@ -91,7 +134,7 @@ mac.versions = {
 	},
 	//Get a log from git
 	getLog : function getLog(branchName, path, processListener) {
-		var format = '--pretty=format:commitHash_:_%H_,_authorName_:_%an_,_authorDate_:_%ad_,_authorTime_:_%at_,_subject_:_%s _END_LINE_'
+		var format = '--pretty=format:shortCommitHash_:_%h_,_commitHash_:_%H_,_authorName_:_%an_,_authorDate_:_%ad_,_authorTime_:_%at_,_subject_:_%s _END_LINE_'
 		mac.versions.git(['log', format, branchName, '--', path], processListener)
 	},
 	//Get a list of all files inside a branch
@@ -125,7 +168,7 @@ mac.versions = {
 				for (var j in sections) {
 				    if (sections[j].indexOf('_:_' != -1)) {
 						var parts = sections[j].split('_:_')
-						item[parts[0]] = parts[1];
+						item[dojo.trim(parts[0])] = dojo.trim(parts[1]);
 					}
 				}
 				items.push(item)

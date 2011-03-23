@@ -12,4 +12,3 @@ mac.views.ExperimentDetail = function(params){
 	}
 	init();
 }
-

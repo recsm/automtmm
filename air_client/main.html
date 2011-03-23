@@ -89,6 +89,7 @@
 			////   ONLOAD       							  ////
 			//////////////////////////////////////////////////////
 			dojo.addOnLoad( function() {
+			
 				//Parse dojo widgets out of the applicationBase div
 				dojo.parser.parse(dojo.byId('application'));
 				
@@ -96,7 +97,8 @@
 				mac.settingsManager.init();
 				
 				//Call our main controller to init the application
-				mac.controllers.main.init()
+				mac.controllers.main.init();
+				
 			});
 	      
         </script>
@@ -214,7 +216,7 @@
 		            <tr>
 		              <th field="authorName" width="15%">Author</th>
 		              <th field="authorDate" width="15%">Date</th>
-		              <th field="commitHash" width="20%">Commit Hash</th>
+		              <th field="shortCommitHash" width="20%">Commit</th>
 		              <th field="experiment" width="12%">Experiment</th>
 		              <th field="round" width="10%">Round</th>
 		              <th field="subject" width="20%">Notes</th>
@@ -227,11 +229,10 @@
 		
 		<script id="templateCompareRevisions" type="template/mustache">
 		  	<div class="compareTabContainer" dojoType="dijit.layout.TabContainer" nested="true" style="width: 100%; height: 100%;">
-				<div class="compareNumerical" dojoType="dijit.layout.ContentPane" title="Parameters" selected="true">
+				<div class="compareNumerical" dojoType="dijit.layout.ContentPane" title="Compare Parameters" selected="true">
 					<div style="height:97%">
 						<div style="height:22%">
 						  <h3>Comparison for Round 1 Experiment experiment_2</h3>
-						  <h4>Selected Revisions</h4>
 						  <table class="revisionInfoTable">
 						    <tr>
 						      <th>Revision {{fromRevision}}</th>
@@ -247,18 +248,17 @@
 						    </tr>
 						  </table>
 						</div>
-						<h4 style="margin:0px;padding:0px;">Filter By:</h4>
 						<table>
 						  <tr>
 						     <td>Country:</td>
 						     <td>Group:</td>
-						     <td>Paramater:</td>
+						     <td>Parameter:</td>
 						     <td>Difference Greater Than:</td>
 						  </tr>
 						  <tr>
 						     <td><select required="false" class="selectFilterCountry" dojoType="dijit.form.FilteringSelect" searchAttr="country" labelAttr="country" ignoreCase="true"></select></td>
 						     <td><select required="false" class="selectFilterGroup" dojoType="dijit.form.FilteringSelect" searchAttr="group" labelAttr="group" ignoreCase="true"></select></td>
-						     <td><select required="false" class="selectFilterParamater" dojoType="dijit.form.FilteringSelect" searchAttr="paramater" labelAttr="paramater" ignoreCase="true"></select></td>
+						     <td><select required="false" class="selectFilterParameter" dojoType="dijit.form.FilteringSelect" searchAttr="parameter" labelAttr="parameter" ignoreCase="true"></select></td>
 						     <td><input required="true" class="spinnerMinDifference" dojoType="dijit.form.NumberSpinner" value=".10" smallDelta=".01" constraints="{min:0,max:1}"  /></td>
 						  </tr>
 						</table><br>
@@ -268,7 +268,7 @@
 				            <tr>
 				              <th field="country" width="10%">Country</th>
 				              <th field="group" width="10%">Group</th>
-				              <th field="paramater" width="10%">Paramater</th>
+				              <th field="parameter" width="10%">Parameter</th>
 				              <th field="RevisionFrom" width="10%">Revision 67</th>
 				              <th field="RevisionTo" width="10%">Revision 69</th>
 				              <th field="difference" width="10%">Difference</th>
@@ -278,9 +278,9 @@
 				        </div>
 			        </div>
 			    </div>
-			    <div class="compareSource" dojoType="dijit.layout.ContentPane" title="Source" selected="true">
+			    <div class="compareSource" dojoType="dijit.layout.ContentPane" title="Compare Source" selected="true">
 			    	<h3>Comparison for Round 1 Experiment experiment_2</h3>
-			    	<p>Source</p>
+			    	<div class="compareSourceDiff">Loading Source Diff..</div>
 			    </div>
 			</div>
 		</script> 

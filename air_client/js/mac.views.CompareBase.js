@@ -10,9 +10,13 @@ mac.views.CompareBase = function() {
 		experiment;
 	
 	var onCompareSubmit = function() {
+		
+		//Send the selected commit hashed to the compare view
+		var from  = inputCompareFromRevision.get('value');
+		var to    = inputCompareToRevision.get('value');
 		mac.controllers.main.openCompareRevisions(
-			{fromRevision : 61,
-		  	 toRevision   : 62}
+			{fromRevision : from,
+		  	 toRevision   : to}
 		)
 	}
 	
@@ -21,15 +25,15 @@ mac.views.CompareBase = function() {
 		var p = value.split(':');
 		round = 1 * p[0];
 		experiment = p[1];
-		
 	}
 	
 	var updateRevisionSelects = function() {
 		setRoundAndExperiment();
 		var store = mac.experiments.getSelectedRevisionStore(round, experiment);
 		
-		//console.log(inputCompareFromRevision, inputCompareToRevision);
-		
+		//Here the child select elements get recreated, since we
+		//are swapping the store to a new store
+		//this seems to be the easiest way to go about it.
 		if (typeof(inputCompareFromRevision) != 'undefined'){
 			inputCompareFromRevision.destroy();
 			inputCompareToRevision.destroy()
@@ -49,7 +53,7 @@ mac.views.CompareBase = function() {
 	var init = function() {
 		buttonCompareSubmit         	= dijit.byId('buttonCompareSubmit');
 		inputCompareRoundAndExperiment  = dijit.byId('inputCompareRoundAndExperiment');
-		//inputCompareFromRevision  		= dijit.byId('inputCompareFromRevision');
+		//inputCompareFromRevision  	= dijit.byId('inputCompareFromRevision');
 		//inputCompareToRevision  		= dijit.byId('inputCompareToRevision');
 		
 		//Set the drop down input to our experiment store

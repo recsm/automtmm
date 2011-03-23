@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////
-////   EXPERIMENT MANAGERS					  	  ////
+////   EXPERIMENT MANAGER					  	  ////
 //////////////////////////////////////////////////////
 
 mac.experiments = {
@@ -12,6 +12,27 @@ mac.experiments = {
 	getExperimentFile : function getExperimentFile (round, experiment, fileName) {
 		var filePath   = mac.experiments.getExperimentDirectory(round, experiment) + '/'+ fileName
 		return air.File.documentsDirectory.resolvePath(filePath)
+	},
+	//Show a revision of a file with git
+	getExperimentFileRevision : function showFileRevision(round, experiment, fileName, commitHash, onComplete) {
+		//For git show, we just need a relative path
+		var filePath   = 'round_' + round + '/' + experiment + '/' + fileName;
+		var processListener = new mac.BasicAirListener('git show');
+		processListener.listeners.onComplete = function(data) {
+			//Call the callback we were passed in the args for getExperimentFileRevision
+			onComplete(data);
+		}
+		mac.versions.showFileRevision(filePath, commitHash, processListener);
+	},
+	getExperimentFileDiff : function showFileDiff(round, experiment, fileName, fromCommitHash, toCommitHash, onComplete) {
+		//For git show, we just need a relative path
+		var filePath   = 'round_' + round + '/' + experiment + '/' + fileName;
+		var processListener = new mac.BasicAirListener('git diff');
+		processListener.listeners.onComplete = function(data) {
+			//Call the callback we were passed in the args for getExperimentFileRevision
+			onComplete(data);
+		}
+		mac.versions.showFileDiff(filePath, fromCommitHash, toCommitHash, processListener);
 	},
 	//gets local experiment file contents directly
 	getExperimentFileContents : function getExperimentFileContents (round, experiment, fileName) {
@@ -32,7 +53,6 @@ mac.experiments = {
 			var parts = item.objectName.split('/');
 			var round = 1 * parts[0].substr(parts[0].lastIndexOf('_') +1);
 			var name  = parts[1];				
-			
 			
 			//Some useful things for creating the drop down select
 			var roundAndExperiment = 'Round ' + round + ' ' + name;
@@ -64,13 +84,17 @@ mac.experiments = {
 	},
 	loadRevisionsFromBranch : function loadRevisionsFromBranch (branchName, round, experiment) {
 		var processListener = new mac.BasicAirListener('git log');
-		processListener.listeners.onOutputData = function(event){
-			var process = processListener.getProcess()
-            var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
-            var revisionList = mac.versions.parseLog(data)
+		
+		
+		processListener.listeners.onComplete = function(data){
+			//var process = processListener.getProcess()
+            //var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
+        	
+			var revisionList = mac.versions.parseLog(data)
+			var newItem;
 			
 			for (var i in revisionList) {
-				var newItem = revisionList[i];
+				newItem = revisionList[i];
 				newItem.round = round;
 				newItem.experiment = experiment;
 				newItem.label = newItem.authorName + ' - ' + newItem.authorDate; 
@@ -78,6 +102,8 @@ mac.experiments = {
 				//Some duplicate commit hashes may throw an exception, so we
 				//try to add everything and ignore the expections
 				//This is much easier and faster than other techniques
+				
+				
 				try {
 					mac.models.Revision.newItem(newItem);
 				} catch(e) {}
@@ -85,28 +111,47 @@ mac.experiments = {
 		}
 		//We want revision information for the input.ls8 file
 		var fileName = 'round_' + round + '/' + experiment + '/INPUT.LS8' 
+		console.log('Branch Name', branchName);
 		mac.versions.getLog(branchName, fileName, processListener);
 	},
 	//Create a unique revision store by experiment and round
-	getSelectedRevisionStore : function getSelectedRevisionStore(round, experiment){
+	getSelectedRevisionStore : function getSelectedRevisionStore(round, experiment, refresh){
+		
+		var store = false;
+		
+		if(typeof(refresh) == 'undefined') {
+			refresh = false;
+		}
+		
 		
 		//Check if we already created this store, if so return it
 		for (var i in mac.models.selectedRevisions) {
 			var r = mac.models.selectedRevisions[i];
 			if ((r.round == round) && (r.experiment == experiment)) {
-				return r.store;
+				if (refresh) {
+					store = r.store;
+				}
+				else {
+					return r.store;
+				}
 			}
 		}
 		
+		
+		//If it is the first time this store is requested, then we need to load 
+		//the selected rounds and revisions
 		mac.experiments.loadExperimentRevisions(round, experiment);
-			
-		//Create a linked child store to contain matching experiments and rounds
-		var store =  new dojo.data.ItemFileWriteStore({ 
-			 data : { 
-				identifier: "commitHash",
-				label: "label",
-				items : []}
-		});
+		
+		if (!store) {
+			//Create a linked child store to contain matching experiments and rounds
+			var store = new dojo.data.ItemFileWriteStore({
+				data: {
+					identifier: "commitHash",
+					label: "label",
+					items: []
+				}
+			});
+		}
 		
 		//Whenever an item is added to the parent revison model, we check
 		//and display it if it matches our criteria
@@ -114,22 +159,19 @@ mac.experiments = {
 			var itemExperiment = mac.models.Revision.getValue(item, 'experiment');
 			var itemRound = mac.models.Revision.getValue(item, 'round');
 			if((itemExperiment == experiment) && ((1 * itemRound) == (1 * round))) {
-				var itemAsJson = {
-					label : mac.models.Revision.getValue(item, 'label'), 
-					experiment  : mac.models.Revision.getValue(item, 'experiment'),
-					round : mac.models.Revision.getValue(item, 'round'),
-					authorName : mac.models.Revision.getValue(item, 'authorName'),
-					authorDate : mac.models.Revision.getValue(item, 'authorDate'),
-					subject : mac.models.Revision.getValue(item, 'subject'),
-					commitHash : mac.models.Revision.getValue(item, 'commitHash')
-				}
-				store.newItem(itemAsJson);
+				var obj = mac.models.Revision.itemToObject(item);
+				try {
+					store.newItem(obj);
+				} catch (e) {}
 			}
 		}
 		
 		//Load in existing records for matching experiments and rounds
 		mac.models.Revision.fetch({onItem : function (item) {
-			checkAndAddItem(item);
+			//Some items could be duplicates so we skip them
+			try {
+				checkAndAddItem(item);
+			} catch (e) {}
 		}});
 		
 		dojo.connect(mac.models.Revision, 'onNew', checkAndAddItem);

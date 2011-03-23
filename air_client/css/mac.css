@@ -89,3 +89,10 @@ body h4 {
 	font-size:normal;	
 } 
 
+
+/* diff stuff */
+.diffLineRemoved {color:red}
+.diffLineAdded {color:green}
+.diffOtherLine {color:#aaa}
+.diffBlock {border:1px solid #ddd; background-color:#f2f2f2; padding:5px; margin:10px;}
+
