@@ -136,9 +136,6 @@ mac.experiments = {
 			}
 		}
 		
-		
-		
-		
 		//Create a linked child store to contain matching experiments and rounds
 		var store = new dojo.data.ItemFileWriteStore({
 			data: {
@@ -158,9 +155,8 @@ mac.experiments = {
 				var obj = mac.models.Revision.itemToObject(item);
 				try {
 					store.newItem(obj);
-					console.log('AAAADDDDDEEEEDDDD' , obj.authorDate, obj);
-				} catch (e) {
-					console.log('BATSSSSSUUUUUUUUU' , obj.authorDate, obj);
+				} 
+				catch (e) {
 				}
 			}
 		}
