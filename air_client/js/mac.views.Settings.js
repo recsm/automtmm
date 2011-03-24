@@ -16,8 +16,11 @@ mac.views.Settings = function(params) {
 	 
 	 var updateValuesToSettings = function() {
 	 	dojo.query('.settingsInput').forEach(function (input) {
-			mac.settings[input.name] = input.value;
+			var widget = dijit.byNode(input);
+			console.log(widget);
+			mac.settings[widget.name] = widget.value;
 		})
+		console.log(mac.settings);
 		mac.settingsManager.save();
 	 }
 	 

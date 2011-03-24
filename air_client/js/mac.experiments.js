@@ -117,19 +117,18 @@ mac.experiments = {
 	//Create a unique revision store by experiment and round
 	getSelectedRevisionStore : function getSelectedRevisionStore(round, experiment, refresh){
 		
-		var store = false;
-		
 		if(typeof(refresh) == 'undefined') {
 			refresh = false;
 		}
-		
 		
 		//Check if we already created this store, if so return it
 		for (var i in mac.models.selectedRevisions) {
 			var r = mac.models.selectedRevisions[i];
 			if ((r.round == round) && (r.experiment == experiment)) {
 				if (refresh) {
-					store = r.store;
+					
+					r.store.loadAll();
+					return r.store;
 				}
 				else {
 					return r.store;
@@ -138,53 +137,60 @@ mac.experiments = {
 		}
 		
 		
-		//If it is the first time this store is requested, then we need to load 
-		//the selected rounds and revisions
-		mac.experiments.loadExperimentRevisions(round, experiment);
 		
-		if (!store) {
-			//Create a linked child store to contain matching experiments and rounds
-			var store = new dojo.data.ItemFileWriteStore({
-				data: {
-					identifier: "commitHash",
-					label: "label",
-					items: []
-				}
-			});
-		}
+		
+		//Create a linked child store to contain matching experiments and rounds
+		var store = new dojo.data.ItemFileWriteStore({
+			data: {
+				identifier: "commitHash",
+				label: "label",
+				items: []
+			}
+		});
 		
 		//Whenever an item is added to the parent revison model, we check
 		//and display it if it matches our criteria
-		var checkAndAddItem = function (item) {
+		store.checkAndAddItem = function (item) {
 			var itemExperiment = mac.models.Revision.getValue(item, 'experiment');
 			var itemRound = mac.models.Revision.getValue(item, 'round');
+			console.log(itemExperiment, itemRound, experiment, round);
 			if((itemExperiment == experiment) && ((1 * itemRound) == (1 * round))) {
 				var obj = mac.models.Revision.itemToObject(item);
 				try {
 					store.newItem(obj);
-				} catch (e) {}
+					console.log('AAAADDDDDEEEEDDDD' , obj.authorDate, obj);
+				} catch (e) {
+					console.log('BATSSSSSUUUUUUUUU' , obj.authorDate, obj);
+				}
 			}
 		}
 		
-		//Load in existing records for matching experiments and rounds
-		mac.models.Revision.fetch({onItem : function (item) {
-			//Some items could be duplicates so we skip them
-			try {
-				checkAndAddItem(item);
-			} catch (e) {}
-		}});
+		dojo.connect(mac.models.Revision, 'onNew', store.checkAndAddItem);
 		
-		dojo.connect(mac.models.Revision, 'onNew', checkAndAddItem);
+		store.loadAll = function(){
+			//Load in existing records for matching experiments and rounds
+			mac.models.Revision.fetch({onItem : function (item) {
+				//Some items could be duplicates so we skip them
+				try {
+					store.checkAndAddItem(item);
+				} catch (e) {}
+			}});
+			
+			//Reload the experiments we need
+			mac.experiments.loadExperimentRevisions(round, experiment);
+		}
+		
+		store.loadAll();
 		
 		var createdStore = {
 			store : store,
 			round : round,
 			experiment : experiment
 		}
-		
+	
 		//Keep a copy so that we only create each store once
 		mac.models.selectedRevisions.push(createdStore);
-		
+	
 		return store;
 	},
 	//Does some parsing on a branch ls-tree to find rounds and experiments

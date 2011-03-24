@@ -33,15 +33,12 @@ mac.controllers.main =  {
 	},
 	
 	onSettingsChanged : function() {
-		mac.controllers.main.updateSettingsBasedContent()
+		mac.controllers.main.updateSettingsBasedContent();
 	},
 	updateSettingsBasedContent : function () {
 		dojo.byId('headerUser').innerHTML = mac.settings.userName;
 	},
 	init : function(parentObject) {
-		
-		
-
 		//Start up pageant to keep our ppk key in memory for putty
 		mac.versions.init();
 		
@@ -60,5 +57,7 @@ mac.controllers.main =  {
 		new mac.views.Synchronize();
 		new mac.views.Settings();
 		
+		//Update content based on the settings
+		mac.controllers.main.updateSettingsBasedContent();
 	}
 }

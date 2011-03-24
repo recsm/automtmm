@@ -46,11 +46,13 @@ mac.views.NewRevision = function(params) {
 		processListener.listeners.onExit = function (event) {
 			if(event.exitCode == 0) {
 			    var commitListener = new mac.BasicAirListener('git commit')
+				commitListener.listeners.onComplete = function (data) {
+					//Refresh our store
+					mac.experiments.getSelectedRevisionStore(round, experiment,  true);
+					logProgress("Experiment list refreshed for round " + round + ' ' + experiment);
+				}
 				mac.versions.commit('Testing..... replace this message with some notes?', commitListener)
-				logProgress("Commit Finished");
-				//Refresh our store
-				mac.experiments.getSelectedRevisionStore(round, experiment,  true);
-
+				logProgress("Commit Finished<br>");
 			}
 		}
 		var directory = mac.experiments.getExperimentDirectory(round, experiment);
@@ -81,7 +83,7 @@ mac.views.NewRevision = function(params) {
 	var parseToMatrix = function parseToMatrix() {
 		var processListener = new mac.BasicAirListener('parse_lisrel_out.py')
 		processListener.listeners.onExit = function(event){
-			logProgress("Lisrel output parsed correctly");
+			logProgress("Lisrel output parsed correctly.<br>");
 			addAndCommit();
 		}
 		logProgress('Breaking lisrel output down into matrix.<br>');

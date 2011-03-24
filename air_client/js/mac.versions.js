@@ -31,13 +31,19 @@ mac.versions = {
     	     processListener);
     },
     branchRepository : function branchRepository(branchName) {
-    	//Branch it to settings.branch name
-    	var processListener = new mac.BasicAirListener('git branch');
-    	mac.versions.git(['branch', branchName], processListener);
+    	//Branch repository and switch to new branch
+    	var processListener = new mac.BasicAirListener('git checkout -b');
+    	mac.versions.git(['checkout', '-b', branchName], processListener);
     },
 	//When the settings object for mac has been changed then we do an update
 	onSettingsChanged : function onSettingsChanged() {
 		var processListener = new mac.BasicAirListener('git checkout')
+		processListener.listeners.onExit = function(event) {
+			//1 means branch does not exist yet
+			if (event.exitCode == 1) {
+				mac.versions.branchRepository(mac.settings.gitBranchName);
+			}
+		}
 		mac.versions.checkOutBranch(mac.settings.gitBranchName, processListener);
 		var configProcessListener = new mac.BasicAirListener('git config');
 		configProcessListener.listeners.onExit = function(event) {
@@ -85,8 +91,12 @@ mac.versions = {
 				diffBlocks[blockIndex] += '<div class="diffOtherLine">' + line + '</div>';
 			}
 		}
-		
-		var html = '<div class="diffBlock">' + diffBlocks.join('</div><div class="diffBlock">') + '</div>';
+		if(diffBlocks.length == 0){
+			var html = '<div class="diffBlock">No differences found in source.</div>';
+		} else {
+			var html = '<h4>Total Changes:' + diffBlocks.length + '</h4>';
+			html += '<div class="diffBlock">' + diffBlocks.join('</div><div class="diffBlock">') + '</div>';
+		}
 		
 		return html;
 	},
@@ -116,7 +126,7 @@ mac.versions = {
     	return branches;
     },
     checkOutBranch : function checkOutBranch(branchName, processListener) {
-    	//call git checkout with branchName
+    	//call git checkout with branchName to check out an existing branch
     	mac.versions.git(['checkout', branchName], processListener);
     },
     commit : function commit(message, processListener) {

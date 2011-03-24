@@ -177,6 +177,11 @@ mac.views.CompareRevisions = function (params) {
 	}
 	
 	var init = function() {
+		//There are a series of function calls from one to the other in this view.
+		//init() - > setUpView() -------->loadFileDiff()
+		//  |------> getParamaterFiles() --->setUpParamStore() -----> initGrid() ---->updateGridStore()-->updateFilter()
+		//                                     |--------------------> initFilters() ---> setFromUniqueStore()
+		
 		//Get the actual records from the commit hashes
 		mac.models.Revision.fetchItemByIdentity({identity: params.fromRevision, onItem: function (item) {
 			fromRevision = mac.models.Revision.itemToObject(item);
