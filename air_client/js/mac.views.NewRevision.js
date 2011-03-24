@@ -6,6 +6,10 @@ mac.views.NewRevision = function(params) {
 	var experiment = params.experiment
 	var round      = params.round
 
+	var commitNotes = '';
+	var resumeEditButton, showOutButton;
+	var OUT; //The results of the last run
+	
 	var tabTitle 	=  experiment + ' (new)' 
 	var tab   = mac.controllers.main.openTab(tabTitle)
 	tab.set('content', mac.template('templateNewRevision', params))
@@ -16,8 +20,56 @@ mac.views.NewRevision = function(params) {
 	var nodeNewRevisionReview 	= mac.utilities.getTabNode(".newRevisionReview", tab)
 	var nodeProcessLog 			= mac.utilities.getTabNode(".processLog", tab)
 	
-	logProgress = function(progress) {
+	var logProgress = function(progress) {
 		nodeProcessLog.innerHTML += progress
+	}
+	
+	var resetProgress = function() {
+		try {
+			resumeEditButton.destroy();
+		}
+		catch(e) {
+			
+		}
+		nodeProcessLog.innerHTML = '';
+	}
+	
+	var resumeEdit = function() {
+		resetProgress();
+	    mac.utilities.nodeHide(nodeNewRevisionReview);
+		mac.utilities.nodeShow(nodeNewRevisionCompose);
+	}
+	
+	var showOut = function() {
+		mac.controllers.main.openShowLisrelOut({round : round, experiment : experiment, out : OUT});
+	}
+	
+	var showOptions = function (options) {
+		//Add html
+		if (options.resumeEdit) {
+			logProgress('<button dojoType="dijit.form.Button" class="resumeEditButton">Resume Editing</button>');
+		}
+		
+		if (options.showOut) {
+			logProgress('<button dojoType="dijit.form.Button" class="showOutButton">View Lisrel Output</button>');
+		}
+		
+		//Parse them to widgets
+		dojo.parser.parse(nodeProcessLog);
+		
+		//Connect the new widgets
+		if (options.resumeEdit) {
+			resumeEditButton = mac.utilities.getTabDijit('.resumeEditButton', tab);
+			dojo.connect(resumeEditButton, 'onClick', resumeEdit);
+		}
+		
+		//Connect the new widgets
+		if (options.showOut) {
+			showOutButton = mac.utilities.getTabDijit('.showOutButton', tab);
+			dojo.connect(showOutButton, 'onClick', showOut);
+		}
+		
+		
 	}
 	
 	var setLisrelResult = function setLisrelResult(exitCode) {
@@ -25,7 +77,7 @@ mac.views.NewRevision = function(params) {
 		if (exitCode == 0) {
 			//Open up the output file, and check for errors
 			//If we find E_R_R_O_R then we alert the user and show the output
-			var OUT = mac.experiments.getExperimentFileContents(round, experiment, 'OUT')
+			OUT = mac.experiments.getExperimentFileContents(round, experiment, 'OUT')
 			if (OUT.indexOf('E_R_R_O_R') == -1) {
 				logProgress('Lisrel ran with success.<br>');
 				//Success
@@ -33,12 +85,37 @@ mac.views.NewRevision = function(params) {
 				parseToMatrix();
 			}
 			else {
-				logProgress('Lisrel reported an error in the input.')
+				logProgress('Lisrel reported an error in the input.<br>');
+				showOptions({'resumeEdit': true, 'showOut' : true});
 			}
 		}
 		else {
 			logProgress('There was an error running lisrel, lisrel exited with code (' + exitCode +')<br>');
 		}
+	}
+	
+	var getNotes = function() {
+		var dialog = new dijit.Dialog({title : 'Change notes'});
+		dialog.set('content', mac.template('templateNewRevisionNotes', params));
+		dialog.show();
+		
+		var textarea	 = mac.utilities.getViewDijit('.newRevisionNotes', dialog);
+		var buttonSaveNotes = mac.utilities.getViewDijit('.buttonSaveNotes', dialog);
+		
+		textarea.set('value', commitNotes);
+		textarea.focus();
+		
+		dojo.connect(buttonSaveNotes, 'onClick', function() {
+			if(dojo.trim(textarea.get('value')) == '') {
+				textArea.focus();
+			}
+			else {
+				commitNotes = textarea.get('value');
+				dialog.hide();
+				dialog.destroy();
+				processModel();
+			}
+		})
 	}
 	
 	var addAndCommit = function addAndCommit() {
@@ -51,7 +128,7 @@ mac.views.NewRevision = function(params) {
 					mac.experiments.getSelectedRevisionStore(round, experiment,  true);
 					logProgress("Experiment list refreshed for round " + round + ' ' + experiment);
 				}
-				mac.versions.commit('Testing..... replace this message with some notes?', commitListener)
+				mac.versions.commit(commitNotes, commitListener);
 				logProgress("Commit Finished<br>");
 			}
 		}
@@ -61,8 +138,8 @@ mac.views.NewRevision = function(params) {
 	}
 	
 	var processModel = function processModel() {
-		mac.utilities.nodeHide(nodeNewRevisionCompose)
-	    mac.utilities.nodeShow(nodeNewRevisionReview)
+		mac.utilities.nodeHide(nodeNewRevisionCompose);
+	    mac.utilities.nodeShow(nodeNewRevisionReview);
 	   
 	    var modelContent = inputNewRevisionModel.get('value')
 	    
@@ -91,5 +168,5 @@ mac.views.NewRevision = function(params) {
 	}
 	
 	mac.utilities.nodeHide(nodeNewRevisionReview)
-	dojo.connect(buttonNewRevisionRun, 'onClick', processModel)
+	dojo.connect(buttonNewRevisionRun, 'onClick', getNotes);
 }

@@ -62,6 +62,7 @@
         <script type="text/javascript" src="js/mac.views.ExperimentDetail.js"></script>
         <script type="text/javascript" src="js/mac.views.ExperimentList.js"></script>
         <script type="text/javascript" src="js/mac.views.NewRevision.js"></script>
+        <script type="text/javascript" src="js/mac.views.LisrelOut.js"></script>
         <script type="text/javascript" src="js/mac.views.Settings.js"></script>
         <script type="text/javascript" src="js/mac.views.SingleRevision.js"></script>
         <script type="text/javascript" src="js/mac.views.Synchronize.js"></script>
@@ -203,6 +204,15 @@
 			</div>
 		</script>
 		
+		
+		<script id="templateNewRevisionNotes" type="template/mustache">
+			<p>Please enter some notes about the changes you have made. </p>
+			<textarea required="true" dojoType="dijit.form.SimpleTextarea" style="height:130px;width:450px;" class="newRevisionNotes" ></textarea>
+			<div style="text-align:right;padding:7px 0px;">
+				<button class="buttonSaveNotes" dojoType="dijit.form.Button" iconClass="dijitIconSave">Ok</button>
+			</div>
+		</script>
+		
 		<script id="experimentDetails" type="template/mustache">
 			<div style="height:97%">
 				<div style="height:22%">
@@ -232,19 +242,19 @@
 				<div class="compareNumerical" dojoType="dijit.layout.ContentPane" title="Compare Parameters" selected="true">
 					<div style="height:97%">
 						<div style="height:22%">
-						  <h3>Comparison for Round 1 Experiment experiment_2</h3>
+						  <h3>Comparison for Round {{round}} {{experiment}}</h3>
 						  <table class="revisionInfoTable">
 						    <tr>
-						      <th>Revision {{fromRevision}}</th>
-						      <td>Willem Saris</td>
-						      <td>October 15th, 2010 at 3:15pm</td>
+						      <th>Revision {{fromRevisionHash}}</th>
+						      <td>{{fromRevisionAuthor}}</td>
+						      <td>{{fromRevisionDate}}</td>
 						      <td class="options"><button dojoType="dijit.form.Button">View Revision</button></td>
 						    </tr>
 						    <tr>
-						      <th>Revision {{toRevision}}</th>
-						      <td>Willem Saris</td>
-						      <td>October 15th, 2010 at 3:19pm</td>
-						      <td class="options"><button dojoType="dijit.form.Button">View Revsion</button></td>
+						      <th>Revision {{toRevisionHash}}</th>
+						      <td>{{toRevisionAuthor}}</td>
+						      <td>{{toRevisionDate}}</td>
+						      <td class="options"><button dojoType="dijit.form.Button">View Revision</button></td>
 						    </tr>
 						  </table>
 						</div>
@@ -279,7 +289,7 @@
 			        </div>
 			    </div>
 			    <div class="compareSource" dojoType="dijit.layout.ContentPane" title="Compare Source" selected="true">
-			    	<h3>Comparison for Round 1 Experiment experiment_2</h3>
+			    	<h3>Comparison for {{round}} {{experiment}}</h3>
 			    	<div class="compareSourceDiff">Loading Source Diff..</div>
 			    </div>
 			</div>

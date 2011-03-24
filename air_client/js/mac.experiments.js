@@ -161,6 +161,10 @@ mac.experiments = {
 			}
 		}
 		
+		//Since revisions only get loaded into the parent model
+		//mac.models.Revision, we need to copy over new items
+		//that match our requirements when they are added
+		
 		dojo.connect(mac.models.Revision, 'onNew', store.checkAndAddItem);
 		
 		store.loadAll = function(){

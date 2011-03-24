@@ -18,6 +18,9 @@ mac.controllers.main =  {
 	openExperimentDetail : function (params) {
 		new mac.views.ExperimentDetail(params);
 	},
+	openShowLisrelOut : function (params) {
+		new mac.views.LisrelOut(params);
+	},
 	//Show the settings
 	openSettings : function ()
 	{

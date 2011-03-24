@@ -156,7 +156,6 @@ mac.views.CompareRevisions = function (params) {
 	}
 	
 	
-	
 	var loadFileDiff = function () {
 		mac.experiments.getExperimentFileDiff(round, experiment, 'INPUT.LS8', fromRevision.commitHash, toRevision.commitHash, function(data){
 			compareSourceDiff.innerHTML =  mac.versions.diffToHtml(data);
@@ -166,7 +165,19 @@ mac.views.CompareRevisions = function (params) {
 	var setUpView = function() {
 		var tabTitle = 'Round ' + round + ' ' + experiment + ' (compare)';
 		tab = mac.controllers.main.openTab(tabTitle)
-		tab.set('content', mac.template('templateCompareRevisions', params))
+		
+		//Create a context for the template
+		var context = {}
+		context.fromRevisionAuthor = fromRevision.authorName;
+		context.fromRevisionDate   = fromRevision.authorDate;
+		context.fromRevisionHash   = fromRevision.shortCommitHash;
+		context.toRevisionAuthor   = toRevision.authorName;
+		context.toRevisionDate     = toRevision.authorDate;
+		context.toRevisionHash     = toRevision.shortCommitHash;
+		context.round              = round;
+		context.experiment         = experiment;
+		
+		tab.set('content', mac.template('templateCompareRevisions', context));
 		gridDiff 			  = mac.utilities.getTabDijit(".gridDiff", tab)
 		selectFilterCountry   = mac.utilities.getTabDijit(".selectFilterCountry", tab)
 		selectFilterGroup     = mac.utilities.getTabDijit(".selectFilterGroup", tab)
