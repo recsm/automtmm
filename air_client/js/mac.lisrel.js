@@ -17,19 +17,44 @@ mac.lisrel = {
 		processListener.init(process)
 		process.start(nativeProcessStartupInfo); 
 	},
-	
-	parseToMatrix : function parseToMatrix (outFileNativePath,processListener) {
+	//Call python script
+	parseToMatrix : function parseToMatrix (lisrelOutFileNativePath, processListener) {
 		var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
 		var pythonExecutable = new air.File();
 		pythonExecutable.nativePath = mac.settings.pythonCommand;
 		nativeProcessStartupInfo.executable = pythonExecutable; 
-		var pythonScript = air.File.applicationDirectory.resolvePath('parse_lisrel_out.py').nativePath;
+		var pythonScript = air.File.applicationDirectory.resolvePath('py/lisrel/jsonify_lisrel.py').nativePath;
 		var processArgs = new air.Vector["<String>"]();
-		processArgs.push(pythonScript); 
-		processArgs.push(outFileNativePath); 
+		
+		//Since we are calling python.exe, then the first arg is the python script
+		var args = [pythonScript,"-i", lisrelOutFileNativePath, "-o", lisrelOutFileNativePath + '.JSON' ];
+		var processArgs = new air.Vector["<String>"](); 
+		for (var i in args) {
+			processArgs.push(args[i]);
+		}
 		nativeProcessStartupInfo.arguments = processArgs; 
 		var process = new air.NativeProcess(); 
 		processListener.init(process)
+		processListener.log('Calling:: '+  mac.settings.pythonCommand + ' '+ args.join(' '));
+		process.start(nativeProcessStartupInfo); 
+	},
+	//Call python exe
+	__parseToMatrix : function parseToMatrix (lisrelOutFileNativePath, processListener) {
+		var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
+		var pythonCommand = air.File.applicationDirectory.resolvePath('py/lisrel/dist/jsonify_lisrel.exe').nativePath;
+		nativeProcessStartupInfo.executable = pythonCommand; 
+		var processArgs = new air.Vector["<String>"]();
+		
+		//Since we are calling python.exe, then the first arg is the python script
+		var args = ["-i", lisrelOutFileNativePath, "-o", lisrelOutFileNativePath + '.JSON' ];
+		var processArgs = new air.Vector["<String>"](); 
+		for (var i in args) {
+			processArgs.push(args[i]);
+		}
+		nativeProcessStartupInfo.arguments = processArgs; 
+		var process = new air.NativeProcess(); 
+		processListener.init(process)
+		processListener.log('Calling:: '+  pythonCommand + ' '+ args.join(' '));
 		process.start(nativeProcessStartupInfo); 
 	},
 	

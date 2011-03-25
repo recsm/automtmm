@@ -132,11 +132,15 @@ mac.versions = {
     commit : function commit(message, processListener) {
     	//Commit our changes to the local repository
     	//Push from our origin repo to the master
-    	mac.versions.git(['commit', '-a', '-m', message], processListener)
+    	mac.versions.git(['commit', '-a', '-m', message], processListener);
     },
     push : function push(processListener) {
     	//Push from our origin repo to the master
-    	mac.versions.git(['push', 'origin', mac.settings.gitBranchName], processListener)
+    	mac.versions.git(['push', 'origin', mac.settings.gitBranchName], processListener);
+    },
+    pull : function pull(processListener) {
+    	//Push from our origin repo to the master
+    	mac.versions.git(['pull'], processListener);
     },
 	addDirectory : function addDirectory(directoryPath, processListener){
 		//Add a directory to version control

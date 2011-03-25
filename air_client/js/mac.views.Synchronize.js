@@ -16,8 +16,12 @@ mac.views.Synchronize = function() {
 	}
 	
 	onSyncButtonClick = function() {
-		var processListener = new mac.BasicAirListener('git push')
-		mac.versions.push(processListener)
+		//var pullListener = new mac.BasicAirListener('git pull');
+		//pullListener.listeners.onComplete = function() {
+			var processListener = new mac.BasicAirListener('git push');
+			mac.versions.push(processListener)
+		//}
+		//mac.versions.pull(pullListener);
 	}
 	
 	var init = function() {

@@ -68,8 +68,6 @@ mac.views.NewRevision = function(params) {
 			showOutButton = mac.utilities.getTabDijit('.showOutButton', tab);
 			dojo.connect(showOutButton, 'onClick', showOut);
 		}
-		
-		
 	}
 	
 	var setLisrelResult = function setLisrelResult(exitCode) {
@@ -126,7 +124,10 @@ mac.views.NewRevision = function(params) {
 				commitListener.listeners.onComplete = function (data) {
 					//Refresh our store
 					mac.experiments.getSelectedRevisionStore(round, experiment,  true);
-					logProgress("Experiment list refreshed for round " + round + ' ' + experiment);
+					//Make sure the experiment list is up to date;
+					mac.experiments.refreshExperimentList();
+					logProgress("Experiment list refreshed for round " + round + ' ' + experiment + '<br>');
+					showOptions({'resumeEdit': true, 'showOut' : true});
 				}
 				mac.versions.commit(commitNotes, commitListener);
 				logProgress("Commit Finished<br>");
@@ -160,7 +161,7 @@ mac.views.NewRevision = function(params) {
 	var parseToMatrix = function parseToMatrix() {
 		var processListener = new mac.BasicAirListener('parse_lisrel_out.py')
 		processListener.listeners.onExit = function(event){
-			logProgress("Lisrel output parsed correctly.<br>");
+			logProgress("Lisrel output parsed.<br>");
 			addAndCommit();
 		}
 		logProgress('Breaking lisrel output down into matrix.<br>');

@@ -13,7 +13,6 @@ mac.views.CompareRevisions = function (params) {
 		tab,
 		compareSourceDiff, 
 		gridDiff, 
-		selectFilterCountry, 
 		selectFilterGroup, 
 		selectFilterParameter, 
 		spinnerMinDifference;
@@ -45,11 +44,9 @@ mac.views.CompareRevisions = function (params) {
 	
 	var updateFilter = function () {
 		var filterParams = {};
-		var country    = selectFilterCountry.get('displayedValue');
 		var group      = selectFilterGroup.get('displayedValue');
 		var parameter  = selectFilterParameter.get('displayedValue');	
-		if (country != '')   filterParams['country'] 	 = country;
-		if (group != '') 	 filterParams['group'] 		 = group;
+		if (group != '') 	 filterParams['group_name']  = group;
 		if (parameter != '') filterParams['parameter']   = parameter;
 		gridDiff.filter(filterParams);
 	}
@@ -64,8 +61,12 @@ mac.views.CompareRevisions = function (params) {
 		if (minValue == updateGridStoreLastValue) return true; //pass if no change
 		for (var i in allItems) {
 			var item = allItems[i]
-			if (item.difference > minValue){
-				inRangeItems.push(item)
+			//If 0 show all items
+			if(minValue == 0) {
+				inRangeItems.push(item);
+			}
+			else if (item.difference > minValue){
+				inRangeItems.push(item);
 			}
 		}
 		var storeInRange = new dojo.data.ItemFileWriteStore({ 
@@ -91,50 +92,46 @@ mac.views.CompareRevisions = function (params) {
 		dojo.connect(spinnerMinDifference,  'onClick',   updateGridStore);
 		dojo.connect(spinnerMinDifference,  'onChange',  updateGridStore);
 		dojo.connect(spinnerMinDifference,  'onKeyDown', updateGridStore);
-		dojo.connect(selectFilterCountry,   'onChange',  updateFilter);
 		dojo.connect(selectFilterGroup, 	'onChange',  updateFilter);
 		dojo.connect(selectFilterParameter, 'onChange',  updateFilter);
 		
 		//Assign the datastores to the different widgets
-		setFromUniqueStore('country',  selectFilterCountry);
-		setFromUniqueStore('group', selectFilterGroup);
+		setFromUniqueStore('group_name', selectFilterGroup);
 		setFromUniqueStore('parameter', selectFilterParameter);
 	}
 	
 	
 	var setUpParamStore = function () {
 		allItems = [];
+		var found;
 		
 		for (var i in fromParams) {
 			allItems.push ({
-				country 	 : fromParams[i].country,
-				group 	  	 : fromParams[i].group,
+				group_name	 : fromParams[i].group_name,
 				parameter 	 : fromParams[i].parameter,
-				RevisionFrom : Math.round(fromParams[i].value * 1000) / 1000,
+				RevisionFrom : Math.round(fromParams[i].value_std * 1000) / 1000,
 				RevisionTo    : 10 //Just to notice quickly if a value is missing
 			});
 		}
 		
-		var found;
+		
 		for (var i in toParams) {
 			found = false;
 			for (var j in allItems) {
-				if ((allItems[j].country   == toParams[i].country) &&
-					(allItems[j].group     == toParams[i].group) &&
+				if ((allItems[j].group_name  == toParams[i].group_name) &&
 					(allItems[j].parameter == toParams[i].parameter) 
 				) {
-					allItems[j].RevisionTo = Math.round(toParams[i].value * 1000) / 1000;
+					allItems[j].RevisionTo = Math.round(toParams[i].value_std * 1000) / 1000;
 					found = true;
 					break;
 				}
 			}
 			if (!found) {
 				allItems.push ({
-				country 	 : toParams[i].country,
-				group 	  	 : toParams[i].group,
+				group_name 	 : toParams[i].group_name,
 				parameter 	 : toParams[i].parameter,
 				RevisionFrom : 10,
-				RevisionTo    : Math.round(toParams[i].value * 1000) //Just to notice quickly if a value is missing
+				RevisionTo    : Math.round(toParams[i].value_std * 1000) / 1000 //Just to notice quickly if a value is missing
 			});
 			}
 		}
@@ -179,7 +176,6 @@ mac.views.CompareRevisions = function (params) {
 		
 		tab.set('content', mac.template('templateCompareRevisions', context));
 		gridDiff 			  = mac.utilities.getTabDijit(".gridDiff", tab)
-		selectFilterCountry   = mac.utilities.getTabDijit(".selectFilterCountry", tab)
 		selectFilterGroup     = mac.utilities.getTabDijit(".selectFilterGroup", tab)
 		selectFilterParameter = mac.utilities.getTabDijit(".selectFilterParameter", tab)
 		spinnerMinDifference  = mac.utilities.getTabDijit(".spinnerMinDifference", tab);
