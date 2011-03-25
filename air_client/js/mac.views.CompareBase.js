@@ -29,7 +29,10 @@ mac.views.CompareBase = function() {
 	
 	var updateRevisionSelects = function() {
 		setRoundAndExperiment();
-		var store = mac.experiments.getSelectedRevisionStore(round, experiment);
+		
+		if (mac.settingsManager.verify()) {
+			var store = mac.experiments.getSelectedRevisionStore(round, experiment);
+		}
 		
 		//Here the child select elements get recreated, since we
 		//are swapping the store to a new store

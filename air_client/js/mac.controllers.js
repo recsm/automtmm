@@ -42,11 +42,13 @@ mac.controllers.main =  {
 		dojo.byId('headerUser').innerHTML = mac.settings.userName;
 	},
 	init : function(parentObject) {
-		//Start up pageant to keep our ppk key in memory for putty
-		mac.versions.init();
 		
-		//Refresh the list of experiments
-		mac.experiments.refreshExperimentList();
+		if (mac.settingsManager.verify()) {
+			//Start up pageant to keep our ppk key in memory for putty
+			mac.versions.init();
+			//Refresh the list of experiments
+			mac.experiments.refreshExperimentList();
+		} 
 		
 		//Initialize global items
 		self.tabContainerMain = dijit.byId('tabContainerMain');

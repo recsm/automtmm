@@ -14,7 +14,13 @@ mac.versions = {
 		}
 		nativeProcessStartupInfo.arguments = processArgs;
 		//Set our initial directory to our repository for the command
-		nativeProcessStartupInfo.workingDirectory = air.File.documentsDirectory.resolvePath('MacMTMM/repository')
+		var repoDir = air.File.documentsDirectory.resolvePath('MacMTMM/repository');
+		if(!repoDir.isDirectory) {
+
+			repoDir.createDirectory();	
+		}
+		nativeProcessStartupInfo.workingDirectory = repoDir;
+		
 		//Call the init method of the listener that we were passed
 		var process = new air.NativeProcess();
 		processListener.init(process);
@@ -24,7 +30,7 @@ mac.versions = {
     },
     //Do the initial checkout of the repository
     cloneRepository : function cloneRepository(processListener) {
-    	 //Clone the initial repository
+		 //Clone the initial repository
     	 mac.versions.git(['clone', 
     	     mac.settings.masterRepository,
     	     air.File.documentsDirectory.resolvePath('MacMTMM/repository').nativePath],
