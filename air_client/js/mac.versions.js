@@ -128,7 +128,7 @@ mac.versions = {
 			if (branchName.indexOf('origin/HEAD') != -1) continue;
     		branches.push(branchName);
     	}
-		console.log(branches)
+		//console.log(branches)
     	return branches;
     },
     checkOutBranch : function checkOutBranch(branchName, processListener) {
@@ -150,7 +150,7 @@ mac.versions = {
     },
 	addDirectory : function addDirectory(directoryPath, processListener){
 		//Add a directory to version control
-		mac.versions.git(['add', directoryPath  + air.File.separator + '\*'], processListener)
+		mac.versions.git(['add', directoryPath  + air.File.separator + '.'], processListener)
 	},
 	//Get a log from git
 	getLog : function getLog(branchName, path, processListener) {

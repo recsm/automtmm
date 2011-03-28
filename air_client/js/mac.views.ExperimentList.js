@@ -31,7 +31,7 @@ mac.views.ExperimentList = function () {
 	
 	var openViewExperiment = function() {
 		onGridRowSelected();
-		console.log(selectedRowValues);
+		//console.log(selectedRowValues);
 		mac.controllers.main.openExperimentDetail({round : selectedRowValues.round, experiment : selectedRowValues.name})
 	}
 	
@@ -49,8 +49,8 @@ mac.views.ExperimentList = function () {
 		panelCurrentExperimentInfo   = dojo.query('#viewExperimentList .panelCurrentExperimentInfo')[0]
 		gridExperiments.setStore(mac.models.Experiment)  //Set the data store for the grid
 		gridExperiments.selection.addToSelection(0)      //Select our 
-		dojo.connect(gridExperiments, 'onSelected',    onGridRowSelected)
-		dojo.connect(gridExperiments, 'onRowDblClick', openViewExperiment)
+		dojo.connect(gridExperiments, 'onSelected',    onGridRowSelected);
+		dojo.connect(gridExperiments, 'onRowDblClick', openViewExperiment);
 		
 		dojo.connect(buttonNewRevisionSubmit , 'onClick', openNewRevision)
 		selectedRow = gridExperiments.selection.getFirstSelected()

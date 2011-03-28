@@ -50,6 +50,10 @@ mac.experiments = {
 		for (var i in list) {
 			var item = list[i];
 			if(item.objectName.indexOf('round_') == -1) continue;
+			//Make sure we are working with a relative path even for local objects
+			//Sometimes local objects were returned from git with an absolute path
+			item.objectName = item.objectName.substr(item.objectName.indexOf('round_'));
+			
 			var parts = item.objectName.split('/');
 			var round = 1 * parts[0].substr(parts[0].lastIndexOf('_') +1);
 			var name  = parts[1];				
@@ -102,8 +106,6 @@ mac.experiments = {
 				//Some duplicate commit hashes may throw an exception, so we
 				//try to add everything and ignore the expections
 				//This is much easier and faster than other techniques
-				
-				
 				try {
 					mac.models.Revision.newItem(newItem);
 				} catch(e) {}
@@ -111,7 +113,7 @@ mac.experiments = {
 		}
 		//We want revision information for the input.ls8 file
 		var fileName = 'round_' + round + '/' + experiment + '/INPUT.LS8' 
-		console.log('Branch Name', branchName);
+		//console.log('Branch Name', branchName);
 		mac.versions.getLog(branchName, fileName, processListener);
 	},
 	//Create a unique revision store by experiment and round
@@ -150,7 +152,7 @@ mac.experiments = {
 		store.checkAndAddItem = function (item) {
 			var itemExperiment = mac.models.Revision.getValue(item, 'experiment');
 			var itemRound = mac.models.Revision.getValue(item, 'round');
-			console.log(itemExperiment, itemRound, experiment, round);
+			//console.log(itemExperiment, itemRound, experiment, round);
 			if((itemExperiment == experiment) && ((1 * itemRound) == (1 * round))) {
 				var obj = mac.models.Revision.itemToObject(item);
 				try {
