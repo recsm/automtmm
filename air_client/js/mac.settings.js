@@ -4,7 +4,7 @@ mac.settings = {
 	   	lisrelCommand        : 'C:\\lisrel87\\lisrel87.exe',
 	    gitCommand           : 'C:\\Archivos de programa\\Git\\bin\\git.exe',
 		pythonCommand        : 'C:\\Python27\\python.exe',
-	    masterRepository     : 'git@github.com:recsm/MTMMTest.git',
+	    masterRepository     : 'git@github.com:recsm/MTMMArchive.git',
 	    gitBranchName        : 'default',
 		userName             : 'Default User',
 		userEmail            : 'user@example.com'

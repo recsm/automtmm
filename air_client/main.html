@@ -165,12 +165,12 @@
 		           			</p>
 				        </div>
 				        <div dojoType="dijit.layout.ContentPane" title="Synchronize">
-				        	<h3>Setup Repository</h3>
-				        	<p>Clone an initial copy of the repository</p>
-				        	<button id="buttonCloneSubmit" dojoType="dijit.form.Button" >Setup Clone</button>
-				            <h3>Synchronize</h3>
+				        	<h3>Synchronize</h3>
 				            <p>Synchronize with your team</p>
-				            <button id="buttonSyncSubmit" dojoType="dijit.form.Button" >Syncronize Now</button>
+				       	    <button id="buttonSyncSubmit" dojoType="dijit.form.Button" >Syncronize Now</button>
+				       		<h3>Setup Repository</h3>
+				        	<p>Clone an initial copy of the repository. (Only needed during initial setup)</p>
+				        	<button id="buttonCloneSubmit" dojoType="dijit.form.Button" >Setup Clone</button>
 				        </div>
 				    </div>
 				 </div>  
@@ -179,7 +179,6 @@
    			   <!-- content dynamically created by mac.views.Settings -->
 			</div>
 		</div>
-		
 		<script id="templateExperimentListTopInfo" type="template/mustache">
 	    	<h4>Selected Experiment</h4>
 	    	<p>Round {{round }} experiment {{name}}</p>
@@ -203,7 +202,6 @@
 			   <div class="processLog"></div>
 			</div>
 		</script>
-		
 		
 		<script id="templateNewRevisionNotes" type="template/mustache">
 			<p>Please enter some notes about the changes you have made. </p>

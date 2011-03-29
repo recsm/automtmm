@@ -40,7 +40,19 @@ mac.versions = {
     	//Branch repository and switch to new branch
     	var processListener = new mac.BasicAirListener('git checkout -b');
     	mac.versions.git(['checkout', '-b', branchName], processListener);
+		
     },
+	//Configure our branch pull updates so they work properly
+	updateBranchConfig : function updateBranchConfig() {
+		var configProcessListener = new mac.BasicAirListener('git config');
+		configProcessListener.listeners.onExit = function(event) {
+			configProcessListener.log("EXIT: Process exited with code " + event.exitCode);
+	        mac.versions.setConfig('branch.' + mac.settings.gitBranchName + '.merge',
+			                       'refs/heads/' + mac.settings.gitBranchName, 
+								   new mac.BasicAirListener('git config'));
+		}
+		mac.versions.setConfig('branch.' + mac.settings.gitBranchName + '.remote', 'origin', configProcessListener);
+	},
 	//When the settings object for mac has been changed then we do an update
 	onSettingsChanged : function onSettingsChanged() {
 		var processListener = new mac.BasicAirListener('git checkout')
@@ -49,6 +61,7 @@ mac.versions = {
 			if (event.exitCode == 1) {
 				mac.versions.branchRepository(mac.settings.gitBranchName);
 			}
+			mac.versions.updateBranchConfig();
 		}
 		mac.versions.checkOutBranch(mac.settings.gitBranchName, processListener);
 		var configProcessListener = new mac.BasicAirListener('git config');

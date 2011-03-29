@@ -7,7 +7,7 @@ mac.BasicAirListener = function BasicAirListener(processName, onInit) {
     var log = function log(message) {
         	console.log(processName + ': ' + message)
         }
-	    //These listeners are internal and for logging
+	   
 	    
 	var listeners = {}	
 	
