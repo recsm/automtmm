@@ -81,6 +81,7 @@
             dojo.require("dijit.form.Button");
             dojo.require("dijit.form.NumberTextBox");
             dojo.require("dijit.form.NumberSpinner");
+            dojo.require("dijit.form.ComboBox");
             dojo.require("dijit.form.ValidationTextBox");
             dojo.require("dijit.form.SimpleTextarea");
             dojo.require("dijit.Dialog");
@@ -118,13 +119,13 @@
 	    		<div dojoType="dijit.layout.ContentPane" layoutAlign="client" style="padding:0px 2px;">
 				    <div id="tabContainerMain" dojoType="dijit.layout.TabContainer" style="width: 100%; height: 100%;">
 				        <div id="viewExperimentList" dojoType="dijit.layout.ContentPane" title="Experiments" selected="true">
-				           <div style="height:30%">
-				           		<div  style="float:left;width:68%"> 
+				           <div style="height:40%">
+				           		<div  style="float:left;width:50%"> 
 				           		 	<h3>Experiments</h3>
 				           			<div class="panelCurrentExperimentInfo">
 				           			</div>
 				           		</div>
-				           		<div style="float:right;width:30%"> 
+				           		<div style="float:right;width:50%"> 
 				           			<h3>New Revision</h3>
 				           			<p>
 				           			<label class="floatedLabel">Round:</label>
@@ -137,7 +138,7 @@
 				           			<button id="buttonNewRevisionSubmit" dojoType="dijit.form.Button" iconClass="dijitIconNewTask" style="margin-left:125px;">Begin New Revision</button>
 				           		</div>
 				           </div>
-				           <table id="gridExperiments" selectionMode="single" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 70%;">
+				           <table id="gridExperiments" selectionMode="single" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 60%;">
 				           		<thead>
 				           		<tr>
 				           			<th field="round" width="10%">Round</th>
@@ -151,14 +152,13 @@
 				            <h3>Compare</h3>
 				            <p>Select the Round and Experiment first, then choose the revisions to compare.</p>
 		           			<p>
-		           				<label style="float:left;width:170px;">Round and Experiment:</label>
+		           				<label>Round and Experiment:</label><br>
 		           			    <select style="width:300px" id="inputCompareRoundAndExperiment" dojoType="dijit.form.Select"></select>
 		           			</p>
 		           			<p>
-		           			   <label style="float:left;width:170px;">Compare From Revision:</label>
+		           			   <label>Revsions:</label><br>
 		           			   <span style="float:left;" id="fromRevisionHolder"></span>
 		           			   
-		           			   <label style="float:left;clear:left;width:170px;" > To Revision: </label>
 		           			   <span style="float:left;" id="toRevisionHolder"></span>
 		           			   
 		           			   <button style="float:left;" id="buttonCompareSubmit" dojoType="dijit.form.Button" >Compare</button>
@@ -179,17 +179,25 @@
    			   <!-- content dynamically created by mac.views.Settings -->
 			</div>
 		</div>
+		
 		<script id="templateExperimentListTopInfo" type="template/mustache">
 	    	<h4>Selected Experiment</h4>
 	    	<p>Round {{round }} experiment {{name}}</p>
 	    	<button id="buttonViewExperimentSubmit" dojoType="dijit.form.Button" >View Experiment Details</button>
 		</script>
+		<script id="templateRevisionListTopInfo" type="template/mustache">
+	    	<h4>Selected Revision</h4>
+	    	<p>{{shortCommitHash}} by {{authorName}} created {{dateFriendly}}</p>
+	    	<h4>New Revision</h4>
+	    	<button class="buttonNewRevisionSubmit" dojoType="dijit.form.Button" >Create New Revision from {{shortCommitHash}}</button>
+		</script>
 		
 		<script id="templateNewRevision" type="template/mustache">
 			<div class="newRevisionCompose">
-			   <div style="height:40px;padding:2px;">
+			   <div style="height:65px;padding:2px;">
 			     <button class="buttonNewRevisionRun" style="float:right;" dojoType="dijit.form.Button" iconClass="dijitIconSave">Run in Lisrel</button>
-			     <h3>New Revision for Round {{round}} experiment {{experiment}}</h3> 
+			     <h3>New Revision for round {{round}} experiment {{experiment}}</h3>
+			     <p>{{fromInfoText}}</p> 
 			   </div>
 			   <label style="padding:2px 2px 4px ">Enter the new model below:</label>
 			   <div style="padding:2px;height:80%">
@@ -198,6 +206,7 @@
 			</div>
 			<div class="newRevisionReview">
 			   <h3>New Revision for Round {{round}} experiment {{experiment}}</h3> 
+			   <div class="nextStepOptions"></div>
 			   <h4>Process Log</h4>
 			   <div class="processLog"></div>
 			</div>
@@ -214,23 +223,27 @@
 		<script id="experimentDetails" type="template/mustache">
 			<div style="height:97%">
 				<div style="height:22%">
-				  <h3>Experiment Details</h3>
-				  <h4>Experiment {{experiment}} - Round {{round}}</h4>
+				  <div style="float:left;width:50%;">
+					  <h3>Experiment Details</h3>
+					  <h4>Experiment {{experiment}} - Round {{round}}</h4>
+				  </div>
+				  <div class="panelCurrentRevisionInfo" style="float:right;width:50%;">
+				  </div>
 				</div>
 				<h4>Revisions</h4>
 				<div style="height:60%">
-				<table style="clear:left" class="gridExperimentRevisions" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 100%;">
-		          <thead>
-		            <tr>
-		              <th field="authorName" width="15%">Author</th>
-		              <th field="authorDate" width="15%">Date</th>
-		              <th field="shortCommitHash" width="20%">Commit</th>
-		              <th field="experiment" width="12%">Experiment</th>
-		              <th field="round" width="10%">Round</th>
-		              <th field="subject" width="20%">Notes</th>
-		          	 </tr>
-		          </thead>
-		        </table>
+					<table style="clear:left" class="gridExperimentRevisions" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 100%;">
+			          <thead>
+			            <tr>
+			              <th field="authorName" width="15%">Author</th>
+			              <th field="authorDate" formatter="mac.experiments.dateFormatter" width="25%">Date</th>
+			              <th field="shortCommitHash" width="7%">Commit</th>
+			              <th field="experiment" width="15%">Experiment</th>
+			              <th field="round" width="7%">Round</th>
+			              <th field="subject" width="30%">Notes</th>
+			          	 </tr>
+			          </thead>
+		          	</table>
 		        </div>
 	        </div>
 		</script> 
@@ -246,13 +259,11 @@
 						      <th>Revision {{fromRevisionHash}}</th>
 						      <td>{{fromRevisionAuthor}}</td>
 						      <td>{{fromRevisionDate}}</td>
-						      <td class="options"><button dojoType="dijit.form.Button">View Revision</button></td>
 						    </tr>
 						    <tr>
 						      <th>Revision {{toRevisionHash}}</th>
 						      <td>{{toRevisionAuthor}}</td>
 						      <td>{{toRevisionDate}}</td>
-						      <td class="options"><button dojoType="dijit.form.Button">View Revision</button></td>
 						    </tr>
 						  </table>
 						</div>
@@ -263,9 +274,9 @@
 						     <td>Difference Greater Than:</td>
 						  </tr>
 						  <tr>
-						     <td><select required="false" class="selectFilterGroup" dojoType="dijit.form.FilteringSelect" searchAttr="group" labelAttr="group" ignoreCase="true"></select></td>
-						     <td><select required="false" class="selectFilterParameter" dojoType="dijit.form.FilteringSelect" searchAttr="parameter" labelAttr="parameter" ignoreCase="true"></select></td>
-						     <td><input required="true" class="spinnerMinDifference" dojoType="dijit.form.NumberSpinner" value=".10" smallDelta=".01" constraints="{min:0,max:1}"  /></td>
+						     <td><select style="width:300px;" required="false" class="selectFilterGroup" maxHeight="300" dojoType="dijit.form.FilteringSelect" searchAttr="group_name" labelAttr="group_name" ignoreCase="true"></select></td>
+						     <td><select style="width:100px;" required="false" class="selectFilterParameter" maxHeight="300"  dojoType="dijit.form.FilteringSelect" searchAttr="parameter" labelAttr="parameter" ignoreCase="true"></select></td>
+						     <td><input style="width:100px;" required="true" class="spinnerMinDifference" dojoType="dijit.form.NumberSpinner" value=".10" smallDelta=".01" constraints="{min:0,max:1}"  /></td>
 						  </tr>
 						</table><br>
 						<div style="height:60%">

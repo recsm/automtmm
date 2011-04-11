@@ -38,7 +38,7 @@ mac.views.ExperimentList = function () {
 	var openNewRevision = function() {
 		var experiment 	= inputNewRevisionExperiment.get('value')
 		var round 		= inputNewRevisionRound.get('value')
-		mac.controllers.main.openNewRevision({round: round, experiment: experiment})
+		mac.controllers.main.openNewRevision({round: round, experiment: experiment, fromInfoText : ''});
 	}
 	
 	var init = function () {
@@ -57,3 +57,4 @@ mac.views.ExperimentList = function () {
 	}
 	init();
 }
+

@@ -39,6 +39,22 @@ mac.versions = {
     branchRepository : function branchRepository(branchName) {
     	//Branch repository and switch to new branch
     	var processListener = new mac.BasicAirListener('git checkout -b');
+		processListener.listeners.onExit = function(event) {
+			if (event.exitCode == 0) {
+				//Verify the branch exists remotely
+				var branchListener = new mac.BasicAirListener('git branch -r');
+				branchListener.listeners.onComplete = function(data, exitCode) {
+					if(exitCode == 0) {
+						var remoteBranches = mac.versions.parseRemoteBranchList(data);
+						if (dojo.indexOf(remoteBranches, 'origin/' + branchName) == -1) {
+							//To create the branch on the server we push the new branch
+							mac.versions.push(new mac.BasicAirListener('git push'))
+						}
+					}
+				} 
+				mac.versions.getRemoteBranchList(branchListener); 
+			}
+		}
     	mac.versions.git(['checkout', '-b', branchName], processListener);
 		
     },
@@ -78,7 +94,15 @@ mac.versions = {
 	},
 	//Get a diff of the same file between two versions
 	showFileDiff : function showFileDiff(filePath, fromCommitHash, toCommitHash, processListener) {
-		mac.versions.git(['diff', fromCommitHash, toCommitHash, '--', filePath], processListener);
+		
+		if(mac.settings.diffMode == 'external') {
+			mac.versions.git(['difftool', '--tool=' + mac.settings.diffTool, '--no-prompt',
+				fromCommitHash, toCommitHash, '--', filePath], processListener);
+		}
+		else {
+			mac.versions.git(['diff', fromCommitHash, toCommitHash, '--', filePath], 
+				processListener);
+		}
 	},
 	//make a html markup of a diff file
 	diffToHtml : function diffToHtml(diff){
@@ -123,7 +147,7 @@ mac.versions = {
 		mac.versions.git(['config', property, value], processListener);
 	},
     //Get a list of all local branches
-    getRemoteBranchList : function getBranchList(processListener) {
+    getRemoteBranchList : function getRemoteBranchList(processListener) {
     	//call git branch with no args 
     	mac.versions.git(['branch', '-r'], processListener);
     },
@@ -167,8 +191,8 @@ mac.versions = {
 	},
 	//Get a log from git
 	getLog : function getLog(branchName, path, processListener) {
-		var format = '--pretty=format:shortCommitHash_:_%h_,_commitHash_:_%H_,_authorName_:_%an_,_authorDate_:_%ad_,_authorTime_:_%at_,_subject_:_%s _END_LINE_'
-		mac.versions.git(['log', format, branchName, '--', path], processListener)
+		var format = '--pretty=format:shortCommitHash_:_%h_,_commitHash_:_%H_,_authorName_:_%an_,_timeSince_:_%ar_,_authorDate_:_%at_,_subject_:_%s _END_LINE_'
+		mac.versions.git(['log', format, branchName, '--', path], processListener);
 	},
 	//Get a list of all files inside a branch
 	getBranchFileList : function getBranchFileList(branchName, processListener) {

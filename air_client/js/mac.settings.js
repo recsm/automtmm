@@ -7,7 +7,9 @@ mac.settings = {
 	    masterRepository     : 'git@github.com:recsm/MTMMArchive.git',
 	    gitBranchName        : 'default',
 		userName             : 'Default User',
-		userEmail            : 'user@example.com'
+		userEmail            : 'user@example.com',
+		diffMode			 : 'external',
+		diffTool			 : 'kdiff3'
  	}
 	
 mac.settingsManager = {

@@ -34,7 +34,6 @@ mac.controllers.main =  {
 		tabContainerMain.selectChild(tab);
 		return tab
 	},
-	
 	onSettingsChanged : function() {
 		mac.controllers.main.updateSettingsBasedContent();
 	},
@@ -46,8 +45,8 @@ mac.controllers.main =  {
 		if (mac.settingsManager.verify()) {
 			//Start up pageant to keep our ppk key in memory for putty
 			mac.versions.init();
-			//Refresh the list of experiments
-			mac.experiments.refreshExperimentList();
+			//Initialize our experiments object
+			mac.experiments.init();
 		} 
 		
 		//Initialize global items

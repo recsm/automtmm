@@ -31,7 +31,8 @@ mac.models.Revision.itemToObject = function(item) {
 		authorDate: mac.models.Revision.getValue(item, 'authorDate'),
 		subject: mac.models.Revision.getValue(item, 'subject'),
 		commitHash: mac.models.Revision.getValue(item, 'commitHash'),
-		shortCommitHash: mac.models.Revision.getValue(item, 'shortCommitHash')
+		shortCommitHash: mac.models.Revision.getValue(item, 'shortCommitHash'),
+		timeSince: mac.models.Revision.getValue(item, 'timeSince')
 	}
 }
 

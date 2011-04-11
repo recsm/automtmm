@@ -101,7 +101,7 @@ mac.experiments = {
 				newItem = revisionList[i];
 				newItem.round = round;
 				newItem.experiment = experiment;
-				newItem.label = newItem.authorName + ' - ' + newItem.authorDate; 
+				newItem.label = newItem.authorName + ' - ' + mac.experiments.formatDate(newItem.authorDate); 
 				
 				//Some duplicate commit hashes may throw an exception, so we
 				//try to add everything and ignore the expections
@@ -195,6 +195,62 @@ mac.experiments = {
 	
 		return store;
 	},
+	//Get the last experiment contributed by each author
+	getLastestOtherAuthors : function getLastestOtherAuthors (round, experiment) {
+		var store = mac.experiments.getSelectedRevisionStore(round, experiment);
+		
+		var sortParams = [{
+			attribute: "authorDate", 
+			descending:true, 
+		}];
+		
+		var authorListStore = new dojo.data.ItemFileWriteStore({
+			data: {
+				identifier: "commitHash",
+				label: "label",
+				items: []
+			}
+		});
+								
+		var authorList = [];
+		
+		store.fetch({sort : sortParams,
+		             onComplete : function(items ) {
+					 	for (var i in items) {
+							var item = items[i];
+							
+							var authorName = store.getValue(item, 'authorName');
+							var commitHash = store.getValue(item, 'commitHash');
+							var authorDate = store.getValue(item, 'authorDate');
+							
+							if(authorName == mac.settings.userName) continue;
+							
+							var found = false;
+							for (var i in authorList) {
+								if(authorList[i].authorName == authorName) {
+									found = true;
+									break;
+								}
+							}
+							
+							if (!found) {
+								authorList.push({
+									authorName : authorName,
+									authorDate : authorDate,
+									friendlyDate :mac.experiments.formatDate(authorDate),
+									commitHash : commitHash, 
+								});
+							}
+						}
+						
+						for (var i in authorList) {
+							authorListStore.newItem(authorList[i]);
+						}
+					 }});
+					 
+		return authorListStore;
+		
+	},
 	//Does some parsing on a branch ls-tree to find rounds and experiments
 	loadExperimentsFromBranch : function loadExperimentsFromBranch(branchName) {
 		
@@ -269,4 +325,61 @@ mac.experiments = {
 			mac.experiments.loadRemoteExperiments();
 		})
 	},
+	//A date format helper, for grid displays 
+	dateFormatter : function dateFormatter(data, rowIndex){
+        return mac.experiments.formatDate(data);
+    },
+	//The actual format function
+	formatDate : function formatDate(timestamp) {
+		var today = new Date();
+		var currentTime = Math.round(today.getTime() / 1000);
+		var difference = currentTime - timestamp;
+		var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+		var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+		
+		var endDate = function endDate(day) {
+			if (('' + day).length == 1) {
+				var lastDijit = day;
+			} else {
+				var lastDijit = ('' + day).substr(1);
+			}
+			switch(lastDijit) {
+				case 1: return 'st';
+				case 2: return 'nd';
+				case 3: return 'rd';
+				default: return 'th';
+			}
+		}
+		
+		var date = new Date();
+		date.setTime(timestamp * 1000);
+		
+		if (difference < (60 * 60 * 24) && (today.getDay() == date.getDay())) {
+			var dateString = 'Today';
+		}
+		else if(difference < (60 * 60 * 24 * 7)) {
+			var dateString = days[date.getDay()];
+		}
+		else 
+		{
+			var dateString = months[date.getMonth()] + ' ' + date.getDay() + endDate(date.getDay());
+			
+			if(difference > (60 * 60 * 24 * 356)) {
+				dateString += ', ' + date.getFullYear();
+			}
+		}
+		return dateString + ' - ' + date.toTimeString().substr(0, 5);
+	},
+	init: function(){
+		dojo.subscribe('/mac/sync', function(){
+			//Refresh the list of experiments
+			mac.experiments.refreshExperimentList();
+			//Refresh any revision stores that have been loaded
+			for (var i in mac.models.selectedRevisions) {
+				var r = mac.models.selectedRevisions[i];
+				r.store.loadAll();
+			}
+		});
+		mac.experiments.refreshExperimentList();
+	}
 }

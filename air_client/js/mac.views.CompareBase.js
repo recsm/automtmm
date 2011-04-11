@@ -45,12 +45,22 @@ mac.views.CompareBase = function() {
 		dojo.byId('fromRevisionHolder').innerHTML = '<select id="inputCompareFromRevision"></select>';
 		dojo.byId('toRevisionHolder').innerHTML = '<select id="inputCompareToRevision"></select>';
 		
-		inputCompareFromRevision = new dijit.form.Select({},'inputCompareFromRevision');
-		inputCompareToRevision = new dijit.form.Select({},'inputCompareToRevision');
+		var sortParams = [{
+			attribute: "authorDate", 
+			descending:true, 
+		}];
+						  
+		var selectParams = { maxHeight: 300,
+		                     style : 'width:300px',
+                             searchAttr : 'label',
+							 labelAttr: 'label', 
+							 store: store,
+							 fetchProperties: {
+								sort: sortParams
+							 }}
 		
-		inputCompareFromRevision.setStore(store);
-		inputCompareToRevision.setStore(store);
-		
+		inputCompareFromRevision = new dijit.form.FilteringSelect(selectParams,	'inputCompareFromRevision');
+		inputCompareToRevision = new dijit.form.FilteringSelect(selectParams,'inputCompareToRevision');
 	}
 	
 	var init = function() {

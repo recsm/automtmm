@@ -4,7 +4,7 @@ mac.views.Synchronize = function() {
 	var cloneButton = dijit.byId('buttonCloneSubmit');
 	var syncButton = dijit.byId('buttonSyncSubmit');
 	
-	onCloneButtonClick = function() {
+	var onCloneButtonClick = function() {
 	
 		 var processListener = new mac.BasicAirListener('git clone')
          processListener.listeners.onExit =   function (event) {
@@ -15,11 +15,13 @@ mac.views.Synchronize = function() {
 		mac.versions.cloneRepository(processListener);
 	}
 	
-	onSyncButtonClick = function() {
+	var onSyncButtonClick = function() {
 		
 		var dialog = new dijit.Dialog({title : 'Syncronizing with your team',
 		 						        style: "width: 400px; height:250px;background-color:#fff;"});
 		var logToDialog = function(message) {
+			
+			//This is in a try catch in the case the dialog is closed during the process
 			try {
 				dialog.set('content', dialog.get('content') + message + '<br>');
 			} catch (e) {}
@@ -31,8 +33,11 @@ mac.views.Synchronize = function() {
 				var processListener = new mac.BasicAirListener('git push');
 				processListener.listeners.onComplete = function (data, exitCode) {
 					if (exitCode == 0) {
-						//Refresh the list of experiments
-						mac.experiments.refreshExperimentList();
+						
+						
+						//Publish the sync event to any listeners
+						dojo.publish('/mac/sync');
+						
 						logToDialog('');
 						logToDialog('Sync completed');
 					} else {
@@ -44,8 +49,8 @@ mac.views.Synchronize = function() {
 			} else {
 				logToDialog('Failed to download remote changes');
 			}
-			
 		}
+		
 		mac.versions.pull(pullListener);
 		logToDialog('Please wait while your copy is synced with the server.');
 		logToDialog('');

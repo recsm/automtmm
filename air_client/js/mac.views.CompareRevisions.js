@@ -80,8 +80,13 @@ mac.views.CompareRevisions = function (params) {
 	var initGrid = function initGrid() {
 		//Calculate the difference between each item
 		for (i in allItems) {
-		    var difference = Math.abs(allItems[i]['RevisionFrom'] - allItems[i]['RevisionTo'])
-		    difference = Math.ceil(difference * 1000) / 1000
+		    var difference = Math.abs(allItems[i]['RevisionFrom'] - allItems[i]['RevisionTo']);
+			if (allItems[i]['RevisionFrom'] == allItems[i]['RevisionTo'] * -1) {
+				difference = 0;
+			}
+			else {
+				difference = Math.ceil(difference * 1000) / 1000;
+			}
 			allItems[i]['difference'] = difference;
 		}
 		updateGridStore();
@@ -166,10 +171,10 @@ mac.views.CompareRevisions = function (params) {
 		//Create a context for the template
 		var context = {}
 		context.fromRevisionAuthor = fromRevision.authorName;
-		context.fromRevisionDate   = fromRevision.authorDate;
+		context.fromRevisionDate   = mac.experiments.formatDate(fromRevision.authorDate);
 		context.fromRevisionHash   = fromRevision.shortCommitHash;
 		context.toRevisionAuthor   = toRevision.authorName;
-		context.toRevisionDate     = toRevision.authorDate;
+		context.toRevisionDate     = mac.experiments.formatDate(toRevision.authorDate);
 		context.toRevisionHash     = toRevision.shortCommitHash;
 		context.round              = round;
 		context.experiment         = experiment;
