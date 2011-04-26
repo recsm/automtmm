@@ -46,7 +46,19 @@ mac.BasicAirListener = function BasicAirListener(processName, onInit) {
 		//Do custom stuff with the data
 		//Probably the easiest place to hook into the listener and get the complete data      
 	}
+	
+	listeners.standardInputProgress = function(event){
+                    log("standardInputProgress", event);
+               }
 	    	
+	listeners.progress = function(event){
+                    log("progress", event);
+               }
+			   
+	listeners.socketData = function(event){
+                    log("socketData", event);
+               }
+	
 	listener = {
 	    log          : log,
 	    listeners    : listeners,
@@ -57,6 +69,9 @@ mac.BasicAirListener = function BasicAirListener(processName, onInit) {
 		},
   		init 		 : function init(process) {
 			listener.process = process;
+			process.addEventListener(air.ProgressEvent.SOCKET_DATA, listeners.socketData);
+			process.addEventListener(air.ProgressEvent.PROGRESS, listeners.progress);
+		    process.addEventListener(air.ProgressEvent.STANDARD_INPUT_PROGRESS, listeners.standardInputProgress);
         	process.addEventListener(air.ProgressEvent.STANDARD_OUTPUT_DATA, listeners.onOutputData);
             process.addEventListener(air.ProgressEvent.STANDARD_ERROR_DATA, listeners.onErrorData);
             process.addEventListener(air.NativeProcessExitEvent.EXIT, listeners.onExit);

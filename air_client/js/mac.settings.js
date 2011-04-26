@@ -9,7 +9,8 @@ mac.settings = {
 		userName             : 'Default User',
 		userEmail            : 'user@example.com',
 		diffMode			 : 'external',
-		diffTool			 : 'kdiff3'
+		diffTool			 : 'kdiff3',
+		compression          : '9'
  	}
 	
 mac.settingsManager = {

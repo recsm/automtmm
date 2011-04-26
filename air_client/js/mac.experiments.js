@@ -4,14 +4,43 @@
 
 mac.experiments = {
 	//get a local experiment directory, returns a path string
-	getExperimentDirectory : function getExperimentDirectory (round, experiment) {
+	getExperimentDirectory : function getExperimentDirectory (round, experiment, relative) {
+		
+		if (typeof(relative) == 'undefined') {
+			relative = false
+		}
+		
 		var dirPath   = 'MacMTMM/repository/round_' + round + '/' + experiment
-		return air.File.documentsDirectory.resolvePath(dirPath).nativePath;
+		
+		if (relative) {
+			return 'round_' + round + '/' + experiment;
+		}
+		else {
+			return air.File.documentsDirectory.resolvePath(dirPath).nativePath;
+		}
 	},
 	//get a local experiment air file object
 	getExperimentFile : function getExperimentFile (round, experiment, fileName) {
 		var filePath   = mac.experiments.getExperimentDirectory(round, experiment) + '/'+ fileName
 		return air.File.documentsDirectory.resolvePath(filePath)
+	},
+	//Move the OUT.LATEST contents into the OUT file
+	moveLatestToOut : function moveLatestToOut(round, experiment) {
+		var outLatestFile = mac.experiments.getExperimentFile(round, experiment, 'OUT.LATEST');
+		var outFile = mac.experiments.getExperimentFile(round, experiment, 'OUT');
+		//A file that exists for convenience to open in jrule
+		var outOutFile = mac.experiments.getExperimentFile(round, experiment, 'OUT.OUT'); 
+		//Delete the current OUT File
+		if (outFile.exists) {
+			outFile.deleteFile();
+		}
+		//Delete the current OUT.OUT File
+		if (outOutFile.exists) {
+			outOutFile.deleteFile();
+		}
+		//Copy OUT.LATEST to OUT and OUT.OUT
+		outLatestFile.copyTo(outFile)
+		outLatestFile.copyTo(outOutFile)
 	},
 	//Show a revision of a file with git
 	getExperimentFileRevision : function showFileRevision(round, experiment, fileName, commitHash, onComplete) {
@@ -89,7 +118,6 @@ mac.experiments = {
 	loadRevisionsFromBranch : function loadRevisionsFromBranch (branchName, round, experiment) {
 		var processListener = new mac.BasicAirListener('git log');
 		
-		
 		processListener.listeners.onComplete = function(data){
 			//var process = processListener.getProcess()
             //var data = process.standardOutput.readUTFBytes(process.standardOutput.bytesAvailable);
@@ -101,7 +129,14 @@ mac.experiments = {
 				newItem = revisionList[i];
 				newItem.round = round;
 				newItem.experiment = experiment;
-				newItem.label = newItem.authorName + ' - ' + mac.experiments.formatDate(newItem.authorDate); 
+				
+				if(newItem.subject.length > 30) {
+					var subject = newItem.subject.substr(0,30) + '...';
+				} else {
+					var subject = newItem.subject;
+				}
+				
+				newItem.label = newItem.authorName + ' - ' + mac.experiments.formatDate(newItem.authorDate) + ' - ' + subject; 
 				
 				//Some duplicate commit hashes may throw an exception, so we
 				//try to add everything and ignore the expections
@@ -276,8 +311,12 @@ mac.experiments = {
 					  for (var i in experiments) {
 						  	if(experiments[i].identifier == identifier) {
 						  	var branches = mac.models.Experiment.getValue(item, 'branches');
-						  	if (branches.indexOf(experiments[i].branches) == -1){
-								mac.models.Experiment.setValue(item, 'branches', branches + ', ' + experiments[i].branches);
+							//To make this more readable, we get rid of the origin part
+							var branchShortName = experiments[i].branches.replace('origin/', '');
+						  	if (branches.indexOf(branchShortName) == -1){
+								mac.models.Experiment.setValue(item, 'branches', branches.replace('origin/', '') + ', ' + branchShortName);
+							} else {
+								mac.models.Experiment.setValue(item, 'branches', branches.replace('origin/', ''));
 							}
 						  } 
 					  }				  
@@ -357,17 +396,18 @@ mac.experiments = {
 		if (difference < (60 * 60 * 24) && (today.getDay() == date.getDay())) {
 			var dateString = 'Today';
 		}
-		else if(difference < (60 * 60 * 24 * 7)) {
+		else if(difference < (60 * 60 * 24 * 7) && difference > 0) {
 			var dateString = days[date.getDay()];
 		}
 		else 
 		{
-			var dateString = months[date.getMonth()] + ' ' + date.getDay() + endDate(date.getDay());
-			
+			var dateString = months[date.getMonth()] + ' ' + date.getDate() + endDate(date.getDate());
 			if(difference > (60 * 60 * 24 * 356)) {
 				dateString += ', ' + date.getFullYear();
 			}
 		}
+		
+		//Hours and minutes in 24 hour time - date.toTimeString().substr(0, 5)
 		return dateString + ' - ' + date.toTimeString().substr(0, 5);
 	},
 	init: function(){

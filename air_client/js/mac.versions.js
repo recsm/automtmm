@@ -37,27 +37,19 @@ mac.versions = {
     	     processListener);
     },
     branchRepository : function branchRepository(branchName) {
-    	//Branch repository and switch to new branch
-    	var processListener = new mac.BasicAirListener('git checkout -b');
-		processListener.listeners.onExit = function(event) {
-			if (event.exitCode == 0) {
-				//Verify the branch exists remotely
-				var branchListener = new mac.BasicAirListener('git branch -r');
-				branchListener.listeners.onComplete = function(data, exitCode) {
-					if(exitCode == 0) {
-						var remoteBranches = mac.versions.parseRemoteBranchList(data);
-						if (dojo.indexOf(remoteBranches, 'origin/' + branchName) == -1) {
-							//To create the branch on the server we push the new branch
-							mac.versions.push(new mac.BasicAirListener('git push'))
-						}
-					}
-				} 
-				mac.versions.getRemoteBranchList(branchListener); 
+    	mac.versions.remoteBranchExists(mac.settings.gitBranchName, function onComplete(exists) {
+			if (!exists) {
+				//Branch repository and switch to new branch
+    			var processListener = new mac.BasicAirListener('git checkout -b');
+				mac.versions.git(['checkout', '-b', branchName], processListener);
 			}
-		}
-    	mac.versions.git(['checkout', '-b', branchName], processListener);
-		
-    },
+			else {
+				//Branch repository and switch to existing branch
+				var processListener = new mac.BasicAirListener('git checkout');
+				mac.versions.git(['checkout', branchName], processListener);
+			}
+		})
+	},
 	//Configure our branch pull updates so they work properly
 	updateBranchConfig : function updateBranchConfig() {
 		var configProcessListener = new mac.BasicAirListener('git config');
@@ -71,22 +63,27 @@ mac.versions = {
 	},
 	//When the settings object for mac has been changed then we do an update
 	onSettingsChanged : function onSettingsChanged() {
-		var processListener = new mac.BasicAirListener('git checkout')
-		processListener.listeners.onExit = function(event) {
-			//1 means branch does not exist yet
-			if (event.exitCode == 1) {
-				mac.versions.branchRepository(mac.settings.gitBranchName);
-			}
-			mac.versions.updateBranchConfig();
-		}
-		mac.versions.checkOutBranch(mac.settings.gitBranchName, processListener);
+		
+		mac.versions.branchRepository(mac.settings.gitBranchName);
+		mac.versions.updateBranchConfig();
+		
+		//The calls to config have to be chained which is really annoying, 
+		//but explains all of these listeners that trigger the next step 
+		//onExit
 		var configProcessListener = new mac.BasicAirListener('git config');
+		var configProcessListener2 = new mac.BasicAirListener('git config');
 		configProcessListener.listeners.onExit = function(event) {
 			configProcessListener.log("EXIT: Process exited with code " + event.exitCode);
-	        mac.versions.setConfig('user.email', mac.settings.userEmail, new mac.BasicAirListener('git config'));
+	        mac.versions.setConfig('user.email', mac.settings.userEmail, configProcessListener2);
+		}
+		
+		// Set compression level to level choose, default is highest (9)
+		// See http://www.kernel.org/pub/software/scm/git/docs/git-config.html
+		configProcessListener2.listeners.onExit = function(event) {
+			configProcessListener.log("EXIT: Process exited with code " + event.exitCode);
+	        mac.versions.setConfig('core.compression', mac.settings.compression, new mac.BasicAirListener('git config'));
 		}
 		mac.versions.setConfig('user.name', mac.settings.userName, configProcessListener);
-		
 	},
 	//call git show to get a revision of a file at a specific commit
 	showFileRevision : function showFileRevision(filePath, commitHash, processListener) {
@@ -146,6 +143,27 @@ mac.versions = {
 	setConfig : function setConfig(property, value, processListener) {
 		mac.versions.git(['config', property, value], processListener);
 	},
+	//Check if a remote branch exists
+	remoteBranchExists : function remoteBranchExists(branchName, onComplete) {
+		var processListener = new mac.BasicAirListener('git branch -r')
+		processListener.listeners.onComplete = function(data) {
+			var branches = mac.versions.parseRemoteBranchList(data)
+			
+			for (var i in branches) {
+				var branch = branches[i]
+				var namePart = branch.split('/')[1]
+				
+				
+				if(namePart == branchName) {
+					onComplete(true)
+					return
+				}
+			}
+			onComplete(false)
+		}
+		mac.versions.getRemoteBranchList(processListener);
+	},
+	//mac.versions.remoteBranchExists('melanie', function(result) {console.log(result)})
     //Get a list of all local branches
     getRemoteBranchList : function getRemoteBranchList(processListener) {
     	//call git branch with no args 
@@ -175,19 +193,27 @@ mac.versions = {
     commit : function commit(message, processListener) {
     	//Commit our changes to the local repository
     	//Push from our origin repo to the master
-    	mac.versions.git(['commit', '-a', '-m', message], processListener);
+    	mac.versions.git(['commit', '-m', message], processListener);
     },
     push : function push(processListener) {
-    	//Push from our origin repo to the master
+    	//Push from our repo to the origin
     	mac.versions.git(['push', 'origin', mac.settings.gitBranchName], processListener);
     },
     pull : function pull(processListener) {
-    	//Push from our origin repo to the master
+    	//Pull from our origin branch
     	mac.versions.git(['pull'], processListener);
     },
 	addDirectory : function addDirectory(directoryPath, processListener){
 		//Add a directory to version control
 		mac.versions.git(['add', directoryPath  + air.File.separator + '.'], processListener)
+	},
+	//Add a list of path for staging a commit
+	addPaths : function addPaths(paths, processListener)  {
+		var args = ['add']
+		for (i in paths) {
+			args.push(paths[i])
+		}
+		mac.versions.git(args, processListener)
 	},
 	//Get a log from git
 	getLog : function getLog(branchName, path, processListener) {

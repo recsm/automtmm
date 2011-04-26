@@ -16,8 +16,12 @@ mac.views.NewRevision = function(params) {
 	
 	var buttonNewRevisionRun 	= mac.utilities.getTabDijit(".buttonNewRevisionRun", tab);
 	var inputNewRevisionModel 	= mac.utilities.getTabDijit(".inputNewRevisionModel", tab);
+	var searchInput	 		    = mac.utilities.getTabDijit(".searchInput", tab);
+	var searchButton		    = mac.utilities.getTabDijit(".searchButton", tab);
+	var inputNewRevisionModel 	= mac.utilities.getTabDijit(".inputNewRevisionModel", tab);
 	var nodeNewRevisionCompose 	= mac.utilities.getTabNode(".newRevisionCompose", tab);
 	var nodeNewRevisionReview 	= mac.utilities.getTabNode(".newRevisionReview", tab);
+	var nodeNewRevisionSearch 	= mac.utilities.getTabNode(".newRevisionSearch", tab);
 	var nodeProcessLog 			= mac.utilities.getTabNode(".processLog", tab);
 	var nextStepOptions 		= mac.utilities.getTabNode(".nextStepOptions", tab);
 	
@@ -39,17 +43,45 @@ mac.views.NewRevision = function(params) {
 		nodeProcessLog.innerHTML = '';
 	}
 	
+	//Try to find the next text being searched for
+	var findNext = function() {
+		var searchText = searchInput.get('value').toLowerCase();
+		var inputText = inputNewRevisionModel.getValue().toLowerCase();
+		
+		start = inputNewRevisionModel.containerNode.selectionStart;
+		if (!start || start == '0') start = 0;
+		
+		nextIndex = inputText.indexOf(searchText, start + searchText.length);
+		
+		if(nextIndex == -1) {
+			nextIndex = inputText.indexOf(searchText, 0);
+		}
+		
+		if(nextIndex != -1) {
+			lines 		= inputText.split("\n").length - 1;
+			totalHeight = inputNewRevisionModel.containerNode.scrollHeight;
+			lineHeight  = totalHeight / lines;
+			beforePart  = inputText.substr(0, nextIndex);
+			beforeLines = beforePart.split("\n").length - 1;
+			dijit.selectInputText(inputNewRevisionModel.containerNode, nextIndex, nextIndex+searchText.length);
+			inputNewRevisionModel.focus()
+			inputNewRevisionModel.containerNode.scrollTop = Math.round((lineHeight * beforeLines) - 60)
+		}
+		else
+		{
+			alert ('The search text "' + searchText + '" could not be found');
+		}
+	}
+	
 	var resumeEdit = function resumeEdit() {
-		console.log('beep');
 		resetProgress();
 	    mac.utilities.nodeHide(nodeNewRevisionReview);
 		mac.utilities.nodeShow(nodeNewRevisionCompose);
+		mac.utilities.nodeShow(nodeNewRevisionSearch);
 	}
 	
 	var showOut = function showOut() {
-		console.log('bop');
 		mac.controllers.main.openShowLisrelOut({round : round, experiment : experiment, out : OUT});
-		console.log('beep');
 	}
 	
 	var compareWithMine = function () {
@@ -57,18 +89,22 @@ mac.views.NewRevision = function(params) {
 		store.fetch({query : {authorName : mac.settings.userName},
 		             sort : sortParams,
 					 onComplete : function (items) {
-					 	if(items.length < 2) {
-							alert('Could not find 2 versions for comparison by author ' + mac.settings.userName);
-							
-						}else {
-							mac.controllers.main.openCompareRevisions(
-								{fromRevision : store.getValue(items[1], 'commitHash'),
-							  	 toRevision   : store.getValue(items[0], 'commitHash')}
-							)
-							
-						}
-					 }
-					 });
+						 	if(items.length < 2) {
+								alert('Could not find 2 versions for comparison by author ' + mac.settings.userName);
+								
+							}else {
+								mac.controllers.main.openCompareRevisions(
+									{fromRevision : store.getValue(items[1], 'commitHash'),
+								  	 toRevision   : store.getValue(items[0], 'commitHash')}
+								)
+								
+							}
+					 	},
+					 onError : function (error) {
+						 	alert('There was an error getting the two lastest versions.');
+							console.log(error)
+					 	}
+					});
 	}
 	
 	var showOptions = function (options) {
@@ -143,7 +179,7 @@ mac.views.NewRevision = function(params) {
 		if (exitCode == 0) {
 			//Open up the output file, and check for errors
 			//If we find E_R_R_O_R then we alert the user and show the output
-			OUT = mac.experiments.getExperimentFileContents(round, experiment, 'OUT')
+			OUT = mac.experiments.getExperimentFileContents(round, experiment, 'OUT.LATEST')
 			if ((OUT.indexOf('E_R_R_O_R') != -1) || (OUT.indexOf('W_A_R_N_I_N_G') != -1)) {
 				logProgress('<h4>Lisrel reported an error in the input.</h4>');
 				showOptions({'resumeEdit': true, 'showOut' : true, 'compare' : false});
@@ -152,6 +188,10 @@ mac.views.NewRevision = function(params) {
 			else {
 				logProgress('<h4>Lisrel ran with success.</h4>');
 				//Success
+				
+				//Copy the OUT.LATEST File to OUT, overwriting the last OUT file
+				mac.experiments.moveLatestToOut(round, experiment)
+				
 				//If the output is ok, then we process it in python to extract the dataset we need	
 				parseToMatrix();
 			}
@@ -202,8 +242,15 @@ mac.views.NewRevision = function(params) {
 				logProgress("Commit Finished<br>");
 			}
 		}
-		var directory = mac.experiments.getExperimentDirectory(round, experiment);
-		mac.versions.addDirectory(directory, processListener);
+		
+		var relative = true;
+		var directory = mac.experiments.getExperimentDirectory(round, experiment, relative);
+		
+		//Commit just the important files
+		mac.versions.addPaths([directory  + '/\*.LS8',
+							   directory + '/OUT', 
+		                       directory + '/\*.JSON',], processListener);
+							   
 		logProgress("Committing new revision.<br>");
 	}
 	
@@ -217,6 +264,7 @@ mac.views.NewRevision = function(params) {
 		} catch(e) {}
 	    
 		mac.utilities.nodeHide(nodeNewRevisionCompose);
+		mac.utilities.nodeHide(nodeNewRevisionSearch);
 	    mac.utilities.nodeShow(nodeNewRevisionReview);
 	   
 	    var modelContent = inputNewRevisionModel.get('value')
@@ -247,6 +295,7 @@ mac.views.NewRevision = function(params) {
 	
 	mac.utilities.nodeHide(nodeNewRevisionReview)
 	dojo.connect(buttonNewRevisionRun, 'onClick', getNotes);
+	dojo.connect(searchButton, 'onClick', findNext);
 	
 	if(params.initialContent) {
 		inputNewRevisionModel.set('value', params.initialContent)

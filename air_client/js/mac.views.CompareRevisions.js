@@ -11,8 +11,8 @@ mac.views.CompareRevisions = function (params) {
 		allItems, 
 		updateGridStoreLastValue,
 		tab,
-		compareSourceDiff, 
-		gridDiff, 
+		gridDiff,
+		pleaseWait, 
 		selectFilterGroup, 
 		selectFilterParameter, 
 		spinnerMinDifference;
@@ -53,7 +53,6 @@ mac.views.CompareRevisions = function (params) {
 	
 	//It would be nice to avoid this function, but I don't know how to filter a grid by greater than
 	//Must be possible but hard to find an example so here we always create a new item store
-	
 	var updateGridStore = function () {
 		//Make a sub selection of items to add to the grid, having a difference greater than a certain value 
 		var inRangeItems = []
@@ -73,6 +72,10 @@ mac.views.CompareRevisions = function (params) {
          	data : { items: inRangeItems}
 		});
 		gridDiff.setStore(storeInRange);
+		
+		//Show the grid
+		mac.utilities.nodeHide(pleaseWait);
+		mac.utilities.nodeShow(gridDiffHolder);
 		updateFilter();
 		udpateGridStoreLastValue = minValue;
 	}
@@ -90,6 +93,8 @@ mac.views.CompareRevisions = function (params) {
 			allItems[i]['difference'] = difference;
 		}
 		updateGridStore();
+		
+		
 	}
 	
 	//Init all of the grid filters
@@ -115,10 +120,9 @@ mac.views.CompareRevisions = function (params) {
 				group_name	 : fromParams[i].group_name,
 				parameter 	 : fromParams[i].parameter,
 				RevisionFrom : Math.round(fromParams[i].value_std * 1000) / 1000,
-				RevisionTo    : 10 //Just to notice quickly if a value is missing
+				RevisionTo    : -99 //Just to notice quickly if a value is missing
 			});
 		}
-		
 		
 		for (var i in toParams) {
 			found = false;
@@ -135,7 +139,7 @@ mac.views.CompareRevisions = function (params) {
 				allItems.push ({
 				group_name 	 : toParams[i].group_name,
 				parameter 	 : toParams[i].parameter,
-				RevisionFrom : 10,
+				RevisionFrom : -99,
 				RevisionTo    : Math.round(toParams[i].value_std * 1000) / 1000 //Just to notice quickly if a value is missing
 			});
 			}
@@ -143,25 +147,56 @@ mac.views.CompareRevisions = function (params) {
 		
 		initFilters();
 		initGrid();
-		
+	}
+	
+	var showLoadingError = function (file) {
+		var text =  'Error - There was an error loading the data from the "'  + file + '" file.';
+		pleaseWait.innerHTML = text;
+		alert(text);
 	}
 	
 	//Get the param files for to and from
 	var getParameterFiles = function() {
 		mac.experiments.getExperimentFileRevision(round, experiment, 'OUT.JSON', fromRevision.commitHash, function (data) {
-			fromParams = dojo.fromJson(data);
-			mac.experiments.getExperimentFileRevision(round, experiment, 'OUT.JSON', toRevision.commitHash, function (data) {
-				toParams = dojo.fromJson(data);
-				setUpParamStore();
-			});
+			try {
+					fromParams = dojo.fromJson(data);
+					mac.experiments.getExperimentFileRevision(round, experiment, 'OUT.JSON', toRevision.commitHash, function (data) {
+					try {
+						toParams = dojo.fromJson(data);
+						setUpParamStore();
+					} catch (e) {
+						showLoadingError('to');
+					}
+				});
+			} catch (e) {
+				showLoadingError('from');
+			}
 		});
 	}
 	
-	
+	//Source Input
 	var loadFileDiff = function () {
 		mac.experiments.getExperimentFileDiff(round, experiment, 'INPUT.LS8', fromRevision.commitHash, toRevision.commitHash, function(data){
-			compareSourceDiff.innerHTML =  mac.versions.diffToHtml(data);
-		});
+			if (mac.settings.diffMode != 'external') {
+				compareSourceDiff.innerHTML = mac.versions.diffToHtml(data);
+			}
+		});	
+		if(mac.settings.diffMode == 'external') {
+			compareSourceDiff.innerHTML =  'Please refer to external diff window for INPUT.LS8 file'
+		} 
+	}
+	
+	//Lisrel Out
+	var loadOutDiff = function () {
+		mac.experiments.getExperimentFileDiff(round, experiment, 'OUT', fromRevision.commitHash, toRevision.commitHash, function(data){
+			if (mac.settings.diffMode != 'external') {
+				compareOutDiff.innerHTML = mac.versions.diffToHtml(data);
+			}
+		});	
+		
+		if(mac.settings.diffMode == 'external') {
+			compareOutDiff.innerHTML =  'Please refer to external diff window for OUT file.'
+		}
 	}
 	
 	var setUpView = function() {
@@ -173,9 +208,13 @@ mac.views.CompareRevisions = function (params) {
 		context.fromRevisionAuthor = fromRevision.authorName;
 		context.fromRevisionDate   = mac.experiments.formatDate(fromRevision.authorDate);
 		context.fromRevisionHash   = fromRevision.shortCommitHash;
+		context.fromRevisionSubject= fromRevision.subject;
+		context.fromRevisionDate   = mac.experiments.formatDate(fromRevision.authorDate);
+		context.fromRevisionHash   = fromRevision.shortCommitHash;
 		context.toRevisionAuthor   = toRevision.authorName;
 		context.toRevisionDate     = mac.experiments.formatDate(toRevision.authorDate);
 		context.toRevisionHash     = toRevision.shortCommitHash;
+		context.toRevisionSubject  = toRevision.subject;
 		context.round              = round;
 		context.experiment         = experiment;
 		
@@ -183,9 +222,31 @@ mac.views.CompareRevisions = function (params) {
 		gridDiff 			  = mac.utilities.getTabDijit(".gridDiff", tab)
 		selectFilterGroup     = mac.utilities.getTabDijit(".selectFilterGroup", tab)
 		selectFilterParameter = mac.utilities.getTabDijit(".selectFilterParameter", tab)
-		spinnerMinDifference  = mac.utilities.getTabDijit(".spinnerMinDifference", tab);
-		compareSourceDiff     = mac.utilities.getTabNode(".compareSourceDiff ", tab);
-		loadFileDiff();
+		spinnerMinDifference  = mac.utilities.getTabDijit(".spinnerMinDifference", tab); 
+		compareSourceTab      = mac.utilities.getTabDijit(".compareSource", tab);
+		compareOutTab         = mac.utilities.getTabDijit(".compareOut", tab);
+		compareNumericalTab   = mac.utilities.getTabDijit(".compareNumerical", tab);
+		compareTabContainer   = mac.utilities.getTabDijit(".compareTabContainer", tab);
+		pleaseWait		      = mac.utilities.getTabNode(".pleaseWait", tab);
+		gridDiffHolder		  = mac.utilities.getTabNode(".gridDiffHolder", tab);
+		compareSourceDiff	  = mac.utilities.getTabNode(".compareSourceDiff", tab);
+		compareOutDiff   	  = mac.utilities.getTabNode(".compareOutDiff", tab);
+		
+		mac.utilities.nodeHide(gridDiffHolder);
+		
+		if (mac.settings.diffMode == 'external') {
+			dojo.connect(compareSourceTab, 'onShow', function () {
+				loadFileDiff();
+			})
+			dojo.connect(compareOutTab, 'onShow', function () {
+				loadOutDiff();
+				
+			})
+		} else {
+			loadFileDiff();  //Source Input
+			loadOutDiff();   //Lisrel Out
+		}
+		
 	}
 	
 	var init = function() {

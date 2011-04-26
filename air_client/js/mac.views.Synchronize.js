@@ -26,32 +26,50 @@ mac.views.Synchronize = function() {
 				dialog.set('content', dialog.get('content') + message + '<br>');
 			} catch (e) {}
 		}
+		
+		var pushToGit = function pushToGit() {
+			
+			var processListener = new mac.BasicAirListener('git push');
+			processListener.listeners.onComplete = function (data, exitCode) {
+				if (exitCode == 0) {
+					
+					//Publish the sync event to any listeners
+					dojo.publish('/mac/sync');
+					
+					logToDialog('');
+					logToDialog('Sync completed');
+				} else {
+					logToDialog('Failed to upload changes.');
+				}
+			}
+			mac.versions.push(processListener);
+			
+		}
+		
 		var pullListener = new mac.BasicAirListener('git pull');
 		pullListener.listeners.onComplete = function (data, exitCode) {
 			
 			if(exitCode == 0) {
-				var processListener = new mac.BasicAirListener('git push');
-				processListener.listeners.onComplete = function (data, exitCode) {
-					if (exitCode == 0) {
-						
-						
-						//Publish the sync event to any listeners
-						dojo.publish('/mac/sync');
-						
-						logToDialog('');
-						logToDialog('Sync completed');
-					} else {
-						logToDialog('Failed to upload changes.');
-					}
-				}
-				mac.versions.push(processListener);
+				pushToGit();
 				logToDialog('Uploading your changes to server');
 			} else {
 				logToDialog('Failed to download remote changes');
 			}
 		}
 		
-		mac.versions.pull(pullListener);
+		mac.versions.remoteBranchExists(mac.settings.gitBranchName, function onComplete(exists) {
+			if (!exists) {
+				//Create the branch
+				logToDialog('Creating remote branch ' + mac.settings.gitBranchName);
+				pushToGit();
+				logToDialog('Uploading your changes to server');
+			}
+			else {
+				//Go ahead and pull to update, since we need to pull changes before pushing ours
+				mac.versions.pull(pullListener);
+			}
+		})
+	
 		logToDialog('Please wait while your copy is synced with the server.');
 		logToDialog('');
 		logToDialog('Downloading remote changes.');

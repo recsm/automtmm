@@ -11,7 +11,7 @@ mac.lisrel = {
 		nativeProcessStartupInfo.executable = lisrelExecutable; 
 		var processArgs = new air.Vector["<String>"](); 
 		processArgs.push(sourceFileNativePath); 
-		processArgs.push("OUT");
+		processArgs.push("OUT.LATEST");
 		nativeProcessStartupInfo.arguments = processArgs; 
 		var process = new air.NativeProcess(); 
 		processListener.init(process)
@@ -38,7 +38,7 @@ mac.lisrel = {
 		processListener.log('Calling:: '+  mac.settings.pythonCommand + ' '+ args.join(' '));
 		process.start(nativeProcessStartupInfo); 
 	},
-	//Call python exe
+	//Call python exe (unused)
 	__parseToMatrix : function parseToMatrix (lisrelOutFileNativePath, processListener) {
 		var nativeProcessStartupInfo = new air.NativeProcessStartupInfo(); 
 		var pythonCommand = air.File.applicationDirectory.resolvePath('py/lisrel/dist/jsonify_lisrel.exe').nativePath;

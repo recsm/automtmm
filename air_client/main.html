@@ -95,12 +95,17 @@
 				//Parse dojo widgets out of the applicationBase div
 				dojo.parser.parse(dojo.byId('application'));
 				
+				//A reference so we can do some debugging from the terminal
+				window.mac = mac;
+				
 				//Get our settings
 				mac.settingsManager.init();
 				
 				//Call our main controller to init the application
 				mac.controllers.main.init();
 				
+				
+				console.log(air.ProgressEvent);
 			});
 	      
         </script>
@@ -200,9 +205,13 @@
 			     <p>{{fromInfoText}}</p> 
 			   </div>
 			   <label style="padding:2px 2px 4px ">Enter the new model below:</label>
-			   <div style="padding:2px;height:80%">
+			   <div style="padding:2px;height:70%">
 			     <textarea class="inputNewRevisionModel" dojoType="dijit.form.SimpleTextarea" style="width:100%;height:100%"></textarea>
 			   </div>
+			</div>
+			<div class="newRevisionSearch" style="padding:2px;height:10%">
+				<input class="searchInput" name="searchInput" dojoType="dijit.form.TextBox"></input>
+				<button class="searchButton" dojoType="dijit.form.Button" iconClass="dijitIconSearch">Search</button>
 			</div>
 			<div class="newRevisionReview">
 			   <h3>New Revision for Round {{round}} experiment {{experiment}}</h3> 
@@ -217,6 +226,15 @@
 			<textarea required="true" dojoType="dijit.form.SimpleTextarea" style="height:130px;width:450px;" class="newRevisionNotes" ></textarea>
 			<div style="text-align:right;padding:7px 0px;">
 				<button class="buttonSaveNotes" dojoType="dijit.form.Button" iconClass="dijitIconSave">Ok</button>
+			</div>
+		</script>
+		
+		<script id="lisrelOut" type="template/mustache">
+			<h3>Lisrel Output for new version of Round{{round}} {{experiment}}</h3>
+			<textarea class="lisrelOutput" dojoType="dijit.form.SimpleTextarea" style="height:85%;width:100%">{{out}}</textarea>
+			<div style="padding:2px;height:10%">
+				<input class="searchInput" name="searchInput" dojoType="dijit.form.TextBox"></input>
+				<button class="searchButton" dojoType="dijit.form.Button" iconClass="dijitIconSearch">Search</button>
 			</div>
 		</script>
 		
@@ -254,16 +272,24 @@
 					<div style="height:97%">
 						<div style="height:22%">
 						  <h3>Comparison for Round {{round}} {{experiment}}</h3>
-						  <table class="revisionInfoTable">
+						  <table style="float:left;width:49%" class="revisionInfoTable">
 						    <tr>
-						      <th>Revision {{fromRevisionHash}}</th>
+						      <th>{{fromRevisionHash}}</th>
 						      <td>{{fromRevisionAuthor}}</td>
 						      <td>{{fromRevisionDate}}</td>
 						    </tr>
 						    <tr>
-						      <th>Revision {{toRevisionHash}}</th>
+						    	<td colspan="3">{{fromRevisionSubject}}</td>
+						    </tr>
+						   </table>
+						   <table style="float:left;width:49%;margin-left:1%;"class="revisionInfoTable">
+						     <tr>
+						      <th>{{toRevisionHash}}</th>
 						      <td>{{toRevisionAuthor}}</td>
 						      <td>{{toRevisionDate}}</td>
+						    </tr>
+						    <tr>
+						    	<td colspan="3">{{toRevisionSubject}}</td>
 						    </tr>
 						  </table>
 						</div>
@@ -280,23 +306,32 @@
 						  </tr>
 						</table><br>
 						<div style="height:60%">
-						<table style="clear:left" class="gridDiff" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 100%;">
-				          <thead>
-				            <tr>
-				              <th field="group_name" width="40%">Group</th>
-				              <th field="parameter" width="15%">Parameter</th>
-				              <th field="RevisionFrom" width="15%">Revision {{fromRevisionHash}}</th>
-				              <th field="RevisionTo" width="15%">Revision {{toRevisionHash}}</th>
-				              <th field="difference" width="15%">Difference</th>
-				          	 </tr>
-				          </thead>
-				        </table>
+						<div class="pleaseWait">
+							<p>Loading....</p>
+						</div>
+						<div class="gridDiffHolder" style="width: 100%; height: 100%;">
+							<table style="clear:left" class="gridDiff" dojoType="dojox.grid.DataGrid" style="width: 100%; height: 100%;">
+					          <thead>
+					            <tr>
+					              <th field="group_name" width="40%">Group</th>
+					              <th field="parameter" width="15%">Parameter</th>
+					              <th field="RevisionFrom" width="15%">Revision {{fromRevisionHash}}</th>
+					              <th field="RevisionTo" width="15%">Revision {{toRevisionHash}}</th>
+					              <th field="difference" width="15%">Difference</th>
+					          	 </tr>
+					          </thead>
+					        </table>
+					     </div>
 				        </div>
 			        </div>
 			    </div>
-			    <div class="compareSource" dojoType="dijit.layout.ContentPane" title="Compare Source" selected="true">
-			    	<h3>Comparison for {{round}} {{experiment}}</h3>
+			    <div class="compareSource" dojoType="dijit.layout.ContentPane" title="Compare Source" >
+			    	<h3>Source Comparison for {{round}} {{experiment}}</h3>
 			    	<div class="compareSourceDiff">Loading Source Diff..</div>
+			    </div>
+			    <div class="compareOut" dojoType="dijit.layout.ContentPane" title="Compare Lisrel OUT" >
+			    	<h3>Lisrel Output Comparison for {{round}} {{experiment}}</h3>
+			    	<div class="compareOutDiff">Loading Output Diff..</div>
 			    </div>
 			</div>
 		</script> 

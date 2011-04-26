@@ -36,9 +36,16 @@ mac.views.ExperimentList = function () {
 	}
 	
 	var openNewRevision = function() {
-		var experiment 	= inputNewRevisionExperiment.get('value')
-		var round 		= inputNewRevisionRound.get('value')
-		mac.controllers.main.openNewRevision({round: round, experiment: experiment, fromInfoText : ''});
+		var experiment 	= inputNewRevisionExperiment.get('value');
+		var round 		= inputNewRevisionRound.get('value');
+		
+		if(experiment == '' || round == '') {
+			alert('Please enter both a round and experiment');
+		} else if(!inputNewRevisionExperiment.isValid(false) || !inputNewRevisionRound.isValid(false)) {
+			alert('Please check the experiment and rounf to make sure the values are valid.');
+		} else {
+			mac.controllers.main.openNewRevision({round: round, experiment: experiment, fromInfoText : ''});
+		}
 	}
 	
 	var init = function () {
