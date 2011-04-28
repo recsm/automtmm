@@ -4,16 +4,7 @@ mac.views.Synchronize = function() {
 	var cloneButton = dijit.byId('buttonCloneSubmit');
 	var syncButton = dijit.byId('buttonSyncSubmit');
 	
-	var onCloneButtonClick = function() {
 	
-		 var processListener = new mac.BasicAirListener('git clone')
-         processListener.listeners.onExit =   function (event) {
-            //Call the branch function after the clone has finished
-            mac.versions.branchRepository(mac.settings.gitBranchName);
-         }
-	
-		mac.versions.cloneRepository(processListener);
-	}
 	
 	var onSyncButtonClick = function() {
 		
@@ -27,7 +18,7 @@ mac.views.Synchronize = function() {
 			} catch (e) {}
 		}
 		
-		var pushToGit = function pushToGit() {
+		var pushMasterToGit = function pushToGit() {
 			
 			var processListener = new mac.BasicAirListener('git push');
 			processListener.listeners.onComplete = function (data, exitCode) {
@@ -39,12 +30,29 @@ mac.views.Synchronize = function() {
 					logToDialog('');
 					logToDialog('Sync completed');
 				} else {
+					logToDialog('Failed to upload changes to master branch.');
+				}
+			}
+			mac.versions.pushBranch('master', processListener);
+		}
+		
+		
+		var pushToGit = function pushToGit() {
+			
+			var processListener = new mac.BasicAirListener('git push');
+			processListener.listeners.onComplete = function (data, exitCode) {
+				if (exitCode == 0) {
+					
+					logToDialog('Changes uploaded for branch ' + mac.settings.gitBranchName);
+					logToDialog('Syncing master branch');
+					pushMasterToGit();
+				} else {
 					logToDialog('Failed to upload changes.');
 				}
 			}
 			mac.versions.push(processListener);
-			
 		}
+		
 		
 		var pullListener = new mac.BasicAirListener('git pull');
 		pullListener.listeners.onComplete = function (data, exitCode) {
@@ -74,6 +82,21 @@ mac.views.Synchronize = function() {
 		logToDialog('');
 		logToDialog('Downloading remote changes.');
 		dialog.show();
+	}
+	
+	
+	var onCloneButtonClick = function() {
+	
+		 var processListener = new mac.BasicAirListener('git clone')
+         processListener.listeners.onExit =   function (event) {
+            //Call the on settings changed to update
+			//the branch and author, etc....
+            mac.versions.onSettingsChanged();
+			//Publish the sync event to any listeners
+			dojo.publish('/mac/sync');
+         }
+	
+		mac.versions.cloneRepository(processListener);
 	}
 	
 	var init = function() {

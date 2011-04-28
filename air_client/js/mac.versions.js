@@ -61,7 +61,7 @@ mac.versions = {
 		}
 		mac.versions.setConfig('branch.' + mac.settings.gitBranchName + '.remote', 'origin', configProcessListener);
 	},
-	//When the settings object for mac has been changed then we do an update
+	//When the settings object for mac has been changed (or after clone) then we do an update
 	onSettingsChanged : function onSettingsChanged() {
 		
 		mac.versions.branchRepository(mac.settings.gitBranchName);
@@ -196,8 +196,12 @@ mac.versions = {
     	mac.versions.git(['commit', '-m', message], processListener);
     },
     push : function push(processListener) {
-    	//Push from our repo to the origin
-    	mac.versions.git(['push', 'origin', mac.settings.gitBranchName], processListener);
+    	//Push from our repo settings branch to the origin
+    	mac.versions.pushBranch(mac.settings.gitBranchName, processListener);
+    },
+	pushBranch : function pushBranch(branchName, processListener) {
+    	//Push from a repo branch (branchName) to the origin
+    	mac.versions.git(['push', 'origin', branchName], processListener);
     },
     pull : function pull(processListener) {
     	//Pull from our origin branch

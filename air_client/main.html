@@ -175,6 +175,7 @@
 				       	    <button id="buttonSyncSubmit" dojoType="dijit.form.Button" >Syncronize Now</button>
 				       		<h3>Setup Repository</h3>
 				        	<p>Clone an initial copy of the repository. (Only needed during initial setup)</p>
+				        	<p>Before cloning the repository, please verify that your settings are correct. You should check the master repository, user name, user email, and the git branch name.</p>
 				        	<button id="buttonCloneSubmit" dojoType="dijit.form.Button" >Setup Clone</button>
 				        </div>
 				    </div>
@@ -191,10 +192,14 @@
 	    	<button id="buttonViewExperimentSubmit" dojoType="dijit.form.Button" >View Experiment Details</button>
 		</script>
 		<script id="templateRevisionListTopInfo" type="template/mustache">
-	    	<h4>Selected Revision</h4>
-	    	<p>{{shortCommitHash}} by {{authorName}} created {{dateFriendly}}</p>
+	    	<h4>{{shortCommitHash}} by {{authorName}} created {{dateFriendly}}</h4>
 	    	<h4>New Revision</h4>
 	    	<button class="buttonNewRevisionSubmit" dojoType="dijit.form.Button" >Create New Revision from {{shortCommitHash}}</button>
+		</script>
+		<script id="templateSetRevsionToMaster" type="template/mustache">
+	    	<h4>Set as Master *</h4>
+	    	<button class="buttonSetToMasterSubmit" dojoType="dijit.form.Button" >Set Revision {{shortCommitHash}} as Master</button>
+			<p style="font-size:90%;color:#888;margin-top:2px;">* Please make sure to synchronize first</p>
 		</script>
 		
 		<script id="templateNewRevision" type="template/mustache">
@@ -242,8 +247,9 @@
 			<div style="height:97%">
 				<div style="height:22%">
 				  <div style="float:left;width:50%;">
-					  <h3>Experiment Details</h3>
-					  <h4>Experiment {{experiment}} - Round {{round}}</h4>
+					  <h3>Experiment {{experiment}} - Round {{round}}</h3>
+					  <div class="panelCurrentRevisionSet">
+				  	  </div>
 				  </div>
 				  <div class="panelCurrentRevisionInfo" style="float:right;width:50%;">
 				  </div>
