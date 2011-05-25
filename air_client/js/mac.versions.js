@@ -195,6 +195,10 @@ mac.versions = {
     	//Push from our origin repo to the master
     	mac.versions.git(['commit', '-m', message], processListener);
     },
+	reset : function reset(processListener) {
+    	//Reset the working tree git index
+    	mac.versions.git(['reset'], processListener);
+    },
     push : function push(processListener) {
     	//Push from our repo settings branch to the origin
     	mac.versions.pushBranch(mac.settings.gitBranchName, processListener);
@@ -206,6 +210,18 @@ mac.versions = {
     pull : function pull(processListener) {
     	//Pull from our origin branch
     	mac.versions.git(['pull'], processListener);
+    },
+	pullBranch : function pullBranch(branchName, processListener) {
+    	//Push from a repo branch (branchName) to the origin
+    	mac.versions.git(['pull', 'origin', branchName], processListener);
+    },
+	stash : function stash(processListener) {
+    	//Pull from our origin branch
+    	mac.versions.git(['stash'], processListener);
+    },
+	stashPop : function stashPop(processListener) {
+    	//Pull from our origin branch
+    	mac.versions.git(['stash', 'pop'], processListener);
     },
 	addDirectory : function addDirectory(directoryPath, processListener){
 		//Add a directory to version control

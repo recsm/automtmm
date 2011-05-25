@@ -119,6 +119,7 @@ mac.views.CompareRevisions = function (params) {
 			allItems.push ({
 				group_name	 : fromParams[i].group_name,
 				parameter 	 : fromParams[i].parameter,
+				group_num 	 : fromParams[i].group_num,
 				RevisionFrom : Math.round(fromParams[i].value_std * 1000) / 1000,
 				RevisionTo    : -99 //Just to notice quickly if a value is missing
 			});
@@ -127,7 +128,7 @@ mac.views.CompareRevisions = function (params) {
 		for (var i in toParams) {
 			found = false;
 			for (var j in allItems) {
-				if ((allItems[j].group_name  == toParams[i].group_name) &&
+				if ((allItems[j].group_num == toParams[i].group_num) &&
 					(allItems[j].parameter == toParams[i].parameter) 
 				) {
 					allItems[j].RevisionTo = Math.round(toParams[i].value_std * 1000) / 1000;
@@ -139,6 +140,7 @@ mac.views.CompareRevisions = function (params) {
 				allItems.push ({
 				group_name 	 : toParams[i].group_name,
 				parameter 	 : toParams[i].parameter,
+				group_num 	 : toParams[i].group_num,
 				RevisionFrom : -99,
 				RevisionTo    : Math.round(toParams[i].value_std * 1000) / 1000 //Just to notice quickly if a value is missing
 			});

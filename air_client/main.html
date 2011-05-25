@@ -191,15 +191,16 @@
 	    	<p>Round {{round }} experiment {{name}}</p>
 	    	<button id="buttonViewExperimentSubmit" dojoType="dijit.form.Button" >View Experiment Details</button>
 		</script>
+		
 		<script id="templateRevisionListTopInfo" type="template/mustache">
 	    	<h4>{{shortCommitHash}} by {{authorName}} created {{dateFriendly}}</h4>
-	    	<h4>New Revision</h4>
-	    	<button class="buttonNewRevisionSubmit" dojoType="dijit.form.Button" >Create New Revision from {{shortCommitHash}}</button>
+	    	<button class="buttonNewRevisionSubmit" dojoType="dijit.form.Button" >Create New Revision from {{shortCommitHash}}</button> <br>
+	    	<button class="buttonSaveOutput" dojoType="dijit.form.Button" >Save to file OUT-{{shortCommitHash}}.OUT</button> <br>
 		</script>
+		
 		<script id="templateSetRevsionToMaster" type="template/mustache">
-	    	<h4>Set as Master *</h4>
+	    	<h4>Set as Master</h4>
 	    	<button class="buttonSetToMasterSubmit" dojoType="dijit.form.Button" >Set Revision {{shortCommitHash}} as Master</button>
-			<p style="font-size:90%;color:#888;margin-top:2px;">* Please make sure to synchronize first</p>
 		</script>
 		
 		<script id="templateNewRevision" type="template/mustache">

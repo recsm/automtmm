@@ -18,23 +18,6 @@ mac.views.Synchronize = function() {
 			} catch (e) {}
 		}
 		
-		var pushMasterToGit = function pushToGit() {
-			
-			var processListener = new mac.BasicAirListener('git push');
-			processListener.listeners.onComplete = function (data, exitCode) {
-				if (exitCode == 0) {
-					
-					//Publish the sync event to any listeners
-					dojo.publish('/mac/sync');
-					
-					logToDialog('');
-					logToDialog('Sync completed');
-				} else {
-					logToDialog('Failed to upload changes to master branch.');
-				}
-			}
-			mac.versions.pushBranch('master', processListener);
-		}
 		
 		
 		var pushToGit = function pushToGit() {
@@ -44,8 +27,11 @@ mac.views.Synchronize = function() {
 				if (exitCode == 0) {
 					
 					logToDialog('Changes uploaded for branch ' + mac.settings.gitBranchName);
-					logToDialog('Syncing master branch');
-					pushMasterToGit();
+					//Publish the sync event to any listeners
+					dojo.publish('/mac/sync');
+					
+					logToDialog('');
+					logToDialog('Sync completed');
 				} else {
 					logToDialog('Failed to upload changes.');
 				}
